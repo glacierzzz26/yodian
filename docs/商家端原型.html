@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>悦点 · 商家端原型 v1.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--brand:#1677FF;--brand-h:#4096FF;--brand-a:#0958D9;--brand-bg:#E6F4FF;--brand-bd:#91CAFF;
+--ok:#52C41A;--ok-bg:#F6FFED;--ok-bd:#B7EB8F;
+--wn:#FAAD14;--wn-bg:#FFFBE6;--wn-bd:#FFE58F;
+--er:#FF4D4F;--er-bg:#FFF2F0;--er-bd:#FFCCC7;
+--pp:#722ED1;--pp-bg:#F9F0FF;--pp-bd:#D3ADF7;
+--cy:#13C2C2;--cy-bg:#E6FFFB;
+--t1:rgba(0,0,0,.88);--t2:rgba(0,0,0,.65);--t3:rgba(0,0,0,.45);--t4:rgba(0,0,0,.25);
+--bd:#d9d9d9;--split:rgba(5,5,5,.06);
+--bg:#F5F5F5;--card:#fff;--hover:rgba(0,0,0,.03);--head:#FAFAFA;
+--side:#001529;--side-sub:#000C17;--side-t:rgba(255,255,255,.65);
+--sh:0 1px 2px 0 rgba(0,0,0,.03),0 1px 6px -1px rgba(0,0,0,.02),0 2px 4px 0 rgba(0,0,0,.02);
+--sh-lg:0 6px 16px 0 rgba(0,0,0,.08),0 3px 6px -4px rgba(0,0,0,.12);
+--r:6px;--r-lg:8px;
+}
+html[data-theme=dark]{
+--brand:#1668DC;--brand-h:#3C89E8;--brand-a:#1554AD;--brand-bg:#111A2C;--brand-bd:#15325B;
+--ok:#49AA19;--ok-bg:#162312;--ok-bd:#274916;
+--wn:#D89614;--wn-bg:#2B2111;--wn-bd:#443111;
+--er:#DC4446;--er-bg:#2C1618;--er-bd:#5B2526;
+--pp:#642AB5;--pp-bg:#1A1325;--pp-bd:#301C4D;
+--cy:#13A8A8;--cy-bg:#112123;
+--t1:rgba(255,255,255,.88);--t2:rgba(255,255,255,.65);--t3:rgba(255,255,255,.45);--t4:rgba(255,255,255,.25);
+--bd:#424242;--split:rgba(253,253,253,.12);
+--bg:#000;--card:#141414;--hover:rgba(255,255,255,.06);--head:#1D1D1D;
+--side:#141414;--side-sub:#0A0A0A;--side-t:rgba(255,255,255,.65);
+--sh:0 1px 2px 0 rgba(0,0,0,.5);--sh-lg:0 6px 16px 0 rgba(0,0,0,.6);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+font-size:14px;line-height:1.5715;color:var(--t1);background:var(--bg);
+-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--t4);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+button,input,select,textarea{font-family:inherit;font-size:inherit;outline:none}
+a{color:var(--brand);text-decoration:none}
+.mono{font-family:"SF Mono",Consolas,"Courier New",monospace;font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ============ 登录 ============ */
+#login{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#001529 0%,#003a70 55%,#0958D9 100%)}
+#login::after{content:"";position:absolute;inset:0;
+background:radial-gradient(circle at 18% 22%,rgba(255,255,255,.09),transparent 42%),
+radial-gradient(circle at 82% 78%,rgba(255,255,255,.07),transparent 40%)}
+.lg-card{position:relative;z-index:2;width:400px;background:#fff;border-radius:12px;padding:40px 36px;
+box-shadow:0 12px 48px rgba(0,0,0,.28)}
+.lg-logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1677FF,#0958D9);
+display:grid;place-items:center;color:#fff;font-size:26px;margin:0 auto 16px}
+.lg-t{text-align:center;font-size:22px;font-weight:600;color:rgba(0,0,0,.88);letter-spacing:.5px}
+.lg-s{text-align:center;font-size:13px;color:rgba(0,0,0,.45);margin-top:6px;margin-bottom:28px}
+.lg-f{margin-bottom:16px}
+.lg-f label{display:block;font-size:13px;color:rgba(0,0,0,.65);margin-bottom:6px}
+.lg-in{width:100%;height:40px;padding:0 12px;border:1px solid #d9d9d9;border-radius:6px;
+color:rgba(0,0,0,.88);background:#fff;transition:.2s}
+.lg-in:focus{border-color:#1677FF;box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+.lg-row{display:flex;gap:10px}
+.lg-btn{width:100%;height:42px;margin-top:10px;border:none;border-radius:6px;cursor:pointer;
+background:#1677FF;color:#fff;font-size:15px;font-weight:500;transition:.2s}
+.lg-btn:hover{background:#4096FF;box-shadow:0 4px 12px rgba(22,119,255,.35)}
+.lg-tip{margin-top:20px;padding:10px 12px;background:#E6F4FF;border:1px solid #91CAFF;border-radius:6px;
+font-size:12px;color:#0958D9;line-height:1.7}
+.lg-role{display:flex;gap:8px;margin-bottom:18px}
+.lg-role div{flex:1;height:34px;display:grid;place-items:center;border:1px solid #d9d9d9;border-radius:6px;
+font-size:13px;color:rgba(0,0,0,.65);cursor:pointer;transition:.15s}
+.lg-role div.on{border-color:#1677FF;color:#1677FF;background:#E6F4FF;font-weight:500}
+
+/* ============ 布局 ============ */
+#shell{display:none;min-height:100vh}
+#shell.on{display:block}
+.sider{position:fixed;left:0;top:0;bottom:0;width:216px;background:var(--side);z-index:80;
+display:flex;flex-direction:column;transition:width .2s}
+.sider.mini{width:64px}
+.brand{height:56px;display:flex;align-items:center;gap:10px;padding:0 18px;flex-shrink:0;
+border-bottom:1px solid rgba(255,255,255,.08)}
+.brand i{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#1677FF,#0958D9);
+display:grid;place-items:center;font-size:16px;font-style:normal;color:#fff;flex-shrink:0}
+.brand b{color:#fff;font-size:15px;font-weight:600;white-space:nowrap;letter-spacing:.3px}
+.sider.mini .brand b,.sider.mini .mg-t,.sider.mini .mi span,.sider.mini .mi em{display:none}
+.menu{flex:1;overflow-y:auto;padding:8px 0 20px}
+.menu::-webkit-scrollbar{width:4px}
+.mg-t{padding:14px 20px 6px;font-size:11px;color:rgba(255,255,255,.32);letter-spacing:1px}
+.mi{display:flex;align-items:center;gap:10px;height:40px;padding:0 20px;color:var(--side-t);
+cursor:pointer;font-size:14px;position:relative;transition:.15s;white-space:nowrap}
+.mi:hover{color:#fff;background:rgba(255,255,255,.06)}
+.mi.on{color:#fff;background:var(--brand)}
+.mi.on::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#fff}
+.mi u{width:18px;text-align:center;font-size:15px;text-decoration:none;flex-shrink:0}
+.mi em{margin-left:auto;font-style:normal;font-size:11px;min-width:18px;height:18px;padding:0 5px;
+border-radius:9px;background:var(--er);color:#fff;display:grid;place-items:center;font-weight:600}
+.mi.on em{background:#fff;color:var(--brand)}
+
+.main{margin-left:216px;transition:margin .2s}
+.main.mini{margin-left:64px}
+.hd{position:sticky;top:0;z-index:70;height:56px;background:var(--card);border-bottom:1px solid var(--split);
+display:flex;align-items:center;gap:14px;padding:0 20px}
+.hd-ic{width:32px;height:32px;border-radius:var(--r);display:grid;place-items:center;cursor:pointer;
+color:var(--t2);font-size:16px;transition:.15s}
+.hd-ic:hover{background:var(--hover);color:var(--t1)}
+.crumb{font-size:14px;color:var(--t3)}
+.crumb b{color:var(--t1);font-weight:500}
+.hd-r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.biz{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;
+background:var(--ok-bg);border:1px solid var(--ok-bd);font-size:12px;color:var(--ok);font-weight:500}
+.biz i{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+.who{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:16px;cursor:pointer}
+.who:hover{background:var(--hover)}
+.avt{width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;display:grid;
+place-items:center;font-size:12px;font-weight:600}
+.who span{font-size:13px;color:var(--t1)}
+.who small{font-size:11px;color:var(--t3);display:block;line-height:1.2}
+.body{padding:20px}
+
+/* ============ 通用组件 ============ */
+.pg{display:none}
+.pg.on{display:block;animation:fi .22s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pt{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.pt h1{font-size:20px;font-weight:600;letter-spacing:.3px}
+.pt p{font-size:13px;color:var(--t3);padding-bottom:3px}
+.pt-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--sh);border:1px solid var(--split)}
+.card+.card{margin-top:16px}
+.ch{padding:14px 20px;border-bottom:1px solid var(--split);display:flex;align-items:center;gap:10px}
+.ch h3{font-size:15px;font-weight:600}
+.ch p{font-size:12px;color:var(--t3)}
+.ch-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.cb{padding:20px}
+.cb.p0{padding:0}
+
+.btn{height:32px;padding:0 15px;border:1px solid var(--bd);border-radius:var(--r);background:var(--card);
+color:var(--t1);cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;
+transition:.15s;white-space:nowrap}
+.btn:hover{color:var(--brand);border-color:var(--brand)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:var(--brand-h);border-color:var(--brand-h);color:#fff;box-shadow:0 2px 8px rgba(22,119,255,.3)}
+.btn.dan{background:var(--er);border-color:var(--er);color:#fff}
+.btn.dan:hover{opacity:.85;color:#fff;border-color:var(--er)}
+.btn.dan-o{color:var(--er);border-color:var(--er-bd)}
+.btn.dan-o:hover{background:var(--er);color:#fff;border-color:var(--er)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.ok:hover{opacity:.88;color:#fff;border-color:var(--ok)}
+.btn.txt{border-color:transparent;background:transparent;padding:0 8px}
+.btn.txt:hover{background:var(--hover);border-color:transparent}
+.btn.lg{height:40px;padding:0 22px;font-size:15px}
+.btn.sm{height:26px;padding:0 10px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:disabled:hover{color:var(--t1);border-color:var(--bd)}
+
+.tag{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:4px;
+font-size:12px;line-height:1;border:1px solid transparent;white-space:nowrap}
+.tag.b{background:var(--brand-bg);color:var(--brand);border-color:var(--brand-bd)}
+.tag.g{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-bd)}
+.tag.o{background:var(--wn-bg);color:var(--wn);border-color:var(--wn-bd)}
+.tag.r{background:var(--er-bg);color:var(--er);border-color:var(--er-bd)}
+.tag.p{background:var(--pp-bg);color:var(--pp);border-color:var(--pp-bd)}
+.tag.c{background:var(--cy-bg);color:var(--cy);border-color:var(--cy)}
+.tag.d{background:var(--hover);color:var(--t2);border-color:var(--bd)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:var(--head);color:var(--t1);font-weight:600;text-align:left;padding:12px 16px;
+white-space:nowrap;border-bottom:1px solid var(--split);font-size:13px}
+td{padding:13px 16px;border-bottom:1px solid var(--split);color:var(--t2)}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--hover)}
+tbody tr:last-child td{border-bottom:none}
+td b{color:var(--t1);font-weight:500}
+td .ops{display:flex;gap:2px}
+.tr-warn{background:var(--er-bg)!important}
+.tr-warn:hover{background:var(--er-bg)!important;filter:brightness(.98)}
+
+.inp,.sel{height:32px;padding:0 11px;border:1px solid var(--bd);border-radius:var(--r);
+background:var(--card);color:var(--t1);transition:.15s;width:100%}
+.inp:focus,.sel:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+.inp::placeholder{color:var(--t4)}
+.sel{cursor:pointer;appearance:none;padding-right:28px;
+background-image:linear-gradient(45deg,transparent 50%,var(--t3) 50%),linear-gradient(135deg,var(--t3) 50%,transparent 50%);
+background-position:calc(100% - 15px) 13px,calc(100% - 10px) 13px;background-size:5px 5px;background-repeat:no-repeat}
+textarea.inp{height:auto;padding:7px 11px;resize:vertical;line-height:1.6}
+.fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fi{display:flex;align-items:center;gap:7px}
+.fi>label{font-size:13px;color:var(--t2);white-space:nowrap}
+.fi .inp,.fi .sel{width:auto;min-width:130px}
+.fg{margin-bottom:16px}
+.fg>label{display:block;font-size:13px;color:var(--t1);margin-bottom:6px}
+.fg>label i{color:var(--er);font-style:normal;margin-right:3px}
+.fg small{display:block;font-size:12px;color:var(--t3);margin-top:5px;line-height:1.6}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.f3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}
+
+.sw{position:relative;width:44px;height:22px;border-radius:11px;background:var(--t4);cursor:pointer;
+transition:.2s;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+background:#fff;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.sw.on{background:var(--brand)}
+.sw.on::after{left:24px}
+.sw.dan.on{background:var(--er)}
+.swl{display:flex;align-items:center;gap:10px;cursor:pointer}
+
+.seg{display:inline-flex;padding:2px;background:var(--hover);border-radius:var(--r);gap:2px}
+.seg div{padding:5px 14px;border-radius:4px;font-size:13px;color:var(--t2);cursor:pointer;transition:.15s;white-space:nowrap}
+.seg div:hover{color:var(--t1)}
+.seg div.on{background:var(--card);color:var(--t1);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--split);padding:0 20px}
+.tabs div{padding:12px 16px;font-size:14px;color:var(--t2);cursor:pointer;position:relative;transition:.15s}
+.tabs div:hover{color:var(--brand)}
+.tabs div.on{color:var(--brand);font-weight:500}
+.tabs div.on::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--brand)}
+
+.alert{display:flex;gap:10px;padding:11px 14px;border-radius:var(--r);font-size:13px;line-height:1.7;
+border:1px solid transparent;align-items:flex-start}
+.alert u{font-style:normal;text-decoration:none;flex-shrink:0;font-size:15px;line-height:1.4}
+.alert.b{background:var(--brand-bg);border-color:var(--brand-bd);color:var(--t1)}
+.alert.o{background:var(--wn-bg);border-color:var(--wn-bd);color:var(--t1)}
+.alert.r{background:var(--er-bg);border-color:var(--er-bd);color:var(--t1)}
+.alert.g{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--t1)}
+.alert b{display:block;margin-bottom:2px;color:var(--t1)}
+.alert .ar{margin-left:auto;flex-shrink:0}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:12px 16px;font-size:14px;align-items:baseline}
+.kv dt{color:var(--t3);white-space:nowrap}
+.kv dd{color:var(--t1)}
+.empty{padding:56px 20px;text-align:center;color:var(--t3)}
+.empty u{font-size:44px;display:block;margin-bottom:12px;opacity:.35;font-style:normal;text-decoration:none}
+.empty p{font-size:14px}
+.hint{font-size:12px;color:var(--t3);line-height:1.7}
+
+/* 统计卡 */
+.stats{display:grid;gap:16px;margin-bottom:16px}
+.s5{grid-template-columns:repeat(5,1fr)}
+.s4{grid-template-columns:repeat(4,1fr)}
+.s3{grid-template-columns:repeat(3,1fr)}
+.st{background:var(--card);border:1px solid var(--split);border-radius:var(--r-lg);padding:18px 20px;
+box-shadow:var(--sh);position:relative;overflow:hidden}
+.st>u{position:absolute;right:16px;top:14px;font-size:22px;opacity:.14;font-style:normal;text-decoration:none}
+.st-l{font-size:13px;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.st-v{font-size:27px;font-weight:600;letter-spacing:-.5px;line-height:1.15;font-variant-numeric:tabular-nums}
+.st-v small{font-size:14px;font-weight:400;color:var(--t3);margin-left:3px}
+.st-f{font-size:12px;color:var(--t3);margin-top:7px;display:flex;align-items:center;gap:5px}
+.up{color:var(--ok)}.dn{color:var(--er)}
+.st.hl{border-color:var(--brand-bd);background:linear-gradient(180deg,var(--brand-bg),var(--card) 70%)}
+.st.warn{border-color:var(--wn-bd);background:linear-gradient(180deg,var(--wn-bg),var(--card) 70%)}
+.st.err{border-color:var(--er-bd);background:linear-gradient(180deg,var(--er-bg),var(--card) 70%)}
+
+/* 图表 */
+.bars{display:flex;align-items:flex-end;gap:10px;height:200px;padding:0 4px}
+.bars>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+.bars i{width:100%;max-width:38px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--brand-h),var(--brand));
+position:relative;transition:.3s;min-height:3px}
+.bars i:hover{filter:brightness(1.15)}
+.bars i.a{background:linear-gradient(180deg,#95DE64,var(--ok))}
+.bars span{font-size:11px;color:var(--t3);white-space:nowrap}
+.bars b{font-size:11px;color:var(--t2);font-variant-numeric:tabular-nums}
+.donut{width:150px;height:150px;border-radius:50%;flex-shrink:0;position:relative}
+.donut::after{content:"";position:absolute;inset:26px;border-radius:50%;background:var(--card)}
+.donut-c{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center}
+.donut-c b{font-size:20px;font-weight:600;display:block;font-variant-numeric:tabular-nums}
+.donut-c small{font-size:11px;color:var(--t3)}
+.lgd{display:flex;flex-direction:column;gap:11px;font-size:13px;flex:1}
+.lgd>div{display:flex;align-items:center;gap:8px}
+.lgd i{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.lgd b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--t1);font-weight:500}
+.lgd span{color:var(--t2)}
+.prog{height:6px;border-radius:3px;background:var(--hover);overflow:hidden}
+.prog i{display:block;height:100%;border-radius:3px;background:var(--brand);transition:width .4s}
+
+/* 弹窗 */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;
+align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)}
+.mask.on{display:flex;animation:fi .18s}
+.mdl{background:var(--card);border-radius:var(--r-lg);width:520px;max-width:100%;max-height:88vh;
+display:flex;flex-direction:column;box-shadow:var(--sh-lg);animation:zi .2s ease}
+@keyframes zi{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+.mdl.w7{width:700px}.mdl.w8{width:880px}.mdl.w4{width:420px}.mdl.w10{width:1040px}
+.mh{padding:16px 22px;border-bottom:1px solid var(--split);display:flex;align-items:center;gap:10px}
+.mh h3{font-size:16px;font-weight:600;flex:1}
+.mh .x{cursor:pointer;color:var(--t3);font-size:19px;width:28px;height:28px;border-radius:var(--r);
+display:grid;place-items:center;transition:.15s}
+.mh .x:hover{background:var(--hover);color:var(--t1)}
+.mc{padding:22px;overflow-y:auto;flex:1}
+.mf{padding:13px 22px;border-top:1px solid var(--split);display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.mf .l{margin-right:auto;font-size:13px;color:var(--t3)}
+
+/* 抽屉 */
+.dmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;display:none}
+.dmask.on{display:block;animation:fi .2s}
+.drw{position:fixed;right:0;top:0;bottom:0;width:460px;background:var(--card);z-index:191;
+display:none;flex-direction:column;box-shadow:-6px 0 20px rgba(0,0,0,.15)}
+.drw.on{display:flex;animation:sl .25s ease}
+.drw.w6{width:620px}
+@keyframes sl{from{transform:translateX(100%)}to{transform:none}}
+
+/* Toast */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:999;
+display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
+.tst{display:flex;align-items:center;gap:9px;padding:10px 16px;background:var(--card);
+border-radius:var(--r);box-shadow:var(--sh-lg);font-size:14px;border:1px solid var(--split);
+animation:td .3s ease;max-width:520px}
+@keyframes td{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+.tst u{font-style:normal;font-size:15px}
+.tst.g u{color:var(--ok)}.tst.r u{color:var(--er)}.tst.o u{color:var(--wn)}.tst.b u{color:var(--brand)}
+
+/* 全局降级横幅 */
+#banner{display:none;background:var(--wn-bg);border-bottom:1px solid var(--wn-bd);padding:9px 20px;
+font-size:13px;align-items:center;gap:10px;color:var(--t1)}
+#banner.on{display:flex}
+#banner u{font-style:normal;font-size:15px}
+#banner b{color:var(--wn)}
+#banner .br{margin-left:auto;display:flex;gap:8px}
+
+/* ============ KDS 后厨大屏（强制暗色） ============ */
+#kds{position:fixed;inset:0;z-index:850;background:#0F0F0F;display:none;flex-direction:column;
+color:rgba(255,255,255,.88);font-family:inherit}
+#kds.on{display:flex}
+.k-hd{height:60px;flex-shrink:0;background:#1A1A1A;border-bottom:1px solid #2C2C2C;
+display:flex;align-items:center;gap:16px;padding:0 20px}
+.k-hd h2{font-size:19px;font-weight:600;color:#fff;letter-spacing:1px}
+.k-hd .kt{font-size:26px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.k-chip{display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;
+font-size:13px;background:#262626;border:1px solid #333;color:rgba(255,255,255,.7)}
+.k-chip i{width:7px;height:7px;border-radius:50%}
+.k-chip.g{border-color:#274916;background:#162312;color:#6ABE39}
+.k-chip.g i{background:#6ABE39;animation:bp 1.6s infinite}
+.k-chip.r{border-color:#5B2526;background:#2C1618;color:#E84749}
+.k-chip.r i{background:#E84749;animation:bp .9s infinite}
+.k-hd-r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.k-btn{height:34px;padding:0 15px;border-radius:6px;border:1px solid #333;background:#262626;
+color:rgba(255,255,255,.75);cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.k-btn:hover{background:#333;color:#fff;border-color:#444}
+.k-btn.pri{background:#1668DC;border-color:#1668DC;color:#fff}
+.k-btn.pri:hover{background:#3C89E8;border-color:#3C89E8}
+
+.k-cols{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#2C2C2C;overflow:hidden}
+.k-col{background:#0F0F0F;display:flex;flex-direction:column;overflow:hidden}
+.k-ct{height:46px;flex-shrink:0;display:flex;align-items:center;gap:9px;padding:0 16px;
+background:#1A1A1A;border-bottom:2px solid #2C2C2C;font-size:15px;font-weight:600;color:#fff}
+.k-ct u{font-style:normal;text-decoration:none;font-size:16px}
+.k-ct b{margin-left:auto;min-width:26px;height:22px;padding:0 8px;border-radius:11px;background:#333;
+font-size:13px;display:grid;place-items:center;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+.k-ct.new{border-bottom-color:#D87A16}.k-ct.new b{background:#D87A16;color:#fff}
+.k-ct.mk{border-bottom-color:#1668DC}.k-ct.mk b{background:#1668DC;color:#fff}
+.k-ct.dn{border-bottom-color:#49AA19}.k-ct.dn b{background:#49AA19;color:#fff}
+.k-ct.wt{border-bottom-color:#642AB5}.k-ct.wt b{background:#642AB5;color:#fff}
+.k-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.k-list::-webkit-scrollbar{width:6px}
+.k-list::-webkit-scrollbar-thumb{background:#333}
+
+.kc{background:#1C1C1C;border:1px solid #2E2E2E;border-radius:8px;overflow:hidden;
+border-left:4px solid #555;transition:.2s;animation:ki .3s ease}
+@keyframes ki{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
+.kc.new{border-left-color:#D87A16;box-shadow:0 0 0 1px rgba(216,122,22,.25)}
+.kc.mk{border-left-color:#1668DC}
+.kc.dn{border-left-color:#49AA19;opacity:.72}
+.kc.wt{border-left-color:#642AB5}
+.kc.urg{border-left-color:#E84749;animation:pls 1.5s infinite}
+@keyframes pls{0%,100%{box-shadow:0 0 0 1px rgba(232,71,73,.3)}50%{box-shadow:0 0 0 3px rgba(232,71,73,.5)}}
+.kc-h{padding:11px 14px;background:#232323;display:flex;align-items:center;gap:9px;border-bottom:1px solid #2E2E2E}
+.kc-t{font-size:19px;font-weight:700;color:#fff;letter-spacing:.5px}
+.kc-n{font-size:11px;color:rgba(255,255,255,.4);font-family:"SF Mono",Consolas,monospace}
+.kc-h .kc-r{margin-left:auto;text-align:right}
+.kc-tm{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;color:#6ABE39;line-height:1.2}
+.kc-tm.w{color:#D89614}.kc-tm.d{color:#E84749}
+.kc-h small{font-size:10px;color:rgba(255,255,255,.35);display:block}
+.kc-b{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.ki{display:flex;gap:9px;align-items:flex-start;font-size:15px;line-height:1.45}
+.ki.sv{opacity:.4;text-decoration:line-through}
+.ki>b{min-width:26px;height:24px;border-radius:5px;background:#333;color:#fff;font-size:14px;
+display:grid;place-items:center;flex-shrink:0;font-weight:600}
+.ki>b.m{background:#D87A16}
+.ki-n{flex:1;color:rgba(255,255,255,.92);font-weight:500}
+.ki-s{font-size:12px;color:#D89614;display:block;margin-top:2px;line-height:1.4}
+.ki-r{font-size:12px;color:#E84749;display:block;margin-top:2px;font-weight:500}
+.kc-f{padding:9px 14px;border-top:1px solid #2E2E2E;display:flex;gap:8px;align-items:center;background:#191919}
+.kc-f .kt2{font-size:11px;color:rgba(255,255,255,.4);margin-right:auto;display:flex;gap:6px;align-items:center}
+.kbt{height:30px;padding:0 13px;border-radius:5px;border:none;cursor:pointer;font-size:13px;font-weight:500;
+transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.kbt.p{background:#1668DC;color:#fff}.kbt.p:hover{background:#3C89E8}
+.kbt.g{background:#49AA19;color:#fff}.kbt.g:hover{background:#6ABE39}
+.kbt.o{background:#2E2E2E;color:rgba(255,255,255,.7)}.kbt.o:hover{background:#3A3A3A;color:#fff}
+.kbt.r{background:#2C1618;color:#E84749;border:1px solid #5B2526}.kbt.r:hover{background:#5B2526;color:#fff}
+.k-mini{font-size:11px;padding:2px 7px;border-radius:4px;background:#333;color:rgba(255,255,255,.6)}
+.k-mini.w{background:#2B2111;color:#D89614;border:1px solid #443111}
+.k-empty{padding:44px 16px;text-align:center;color:rgba(255,255,255,.28);font-size:14px}
+.k-empty u{display:block;font-size:36px;margin-bottom:10px;font-style:normal;text-decoration:none;opacity:.5}
+.k-ft{height:38px;flex-shrink:0;background:#1A1A1A;border-top:1px solid #2C2C2C;display:flex;
+align-items:center;gap:20px;padding:0 20px;font-size:12px;color:rgba(255,255,255,.45)}
+.k-ft b{color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums}
+.k-ft .kf-r{margin-left:auto;display:flex;gap:18px}
+
+/* ============ 桌台图 ============ */
+.zone{margin-bottom:22px}
+.zh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.zh h3{font-size:15px;font-weight:600}
+.zh .zl{font-size:12px;color:var(--t3)}
+.zh .zr{margin-left:auto;display:flex;gap:6px;align-items:center}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px}
+.tb{background:var(--card);border:1px solid var(--bd);border-radius:var(--r-lg);padding:13px;
+cursor:pointer;transition:.18s;position:relative;overflow:hidden;min-height:112px;
+display:flex;flex-direction:column}
+.tb:hover{transform:translateY(-2px);box-shadow:var(--sh-lg);border-color:var(--brand)}
+.tb::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--bd)}
+.tb-h{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.tb-n{font-size:17px;font-weight:700;letter-spacing:.3px}
+.tb-s{font-size:11px;color:var(--t3);margin-left:auto}
+.tb-m{font-size:11px;padding:1px 6px;border-radius:3px;background:var(--hover);color:var(--t2);border:1px solid var(--split)}
+.tb-m.post{background:var(--pp-bg);color:var(--pp);border-color:var(--pp-bd)}
+.tb-b{flex:1;font-size:12px;color:var(--t3);line-height:1.7}
+.tb-a{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.tb-f{display:flex;align-items:center;gap:6px;margin-top:7px}
+.tb.empty::before{background:var(--bd)}
+.tb.empty .tb-n{color:var(--t3)}
+.tb.dining::before{background:var(--brand)}
+.tb.dining{border-color:var(--brand-bd);background:linear-gradient(160deg,var(--brand-bg),var(--card) 65%)}
+.tb.dining .tb-a{color:var(--brand)}
+.tb.unpaid::before{background:var(--er)}
+.tb.unpaid{border-color:var(--er-bd);background:linear-gradient(160deg,var(--er-bg),var(--card) 65%)}
+.tb.unpaid .tb-a{color:var(--er)}
+.tb.clean::before{background:var(--wn)}
+.tb.clean{border-color:var(--wn-bd);background:linear-gradient(160deg,var(--wn-bg),var(--card) 65%)}
+.tb.merged::before{background:var(--cy)}
+.tb.merged{border-color:var(--cy);background:linear-gradient(160deg,var(--cy-bg),var(--card) 65%)}
+.tb .lk{position:absolute;right:9px;bottom:9px;font-size:13px;opacity:.6}
+.tlgd{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--t2);align-items:center}
+.tlgd>div{display:flex;align-items:center;gap:6px}
+.tlgd i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* ============ 点单 / 结账 ============ */
+.pos{display:grid;grid-template-columns:150px 1fr 340px;gap:0;height:calc(100vh - 152px);
+background:var(--card);border:1px solid var(--split);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh)}
+.pos-cat{border-right:1px solid var(--split);overflow-y:auto;background:var(--head)}
+.pos-cat div{padding:13px 15px;font-size:14px;color:var(--t2);cursor:pointer;border-left:3px solid transparent;transition:.15s}
+.pos-cat div:hover{background:var(--hover);color:var(--t1)}
+.pos-cat div.on{background:var(--card);color:var(--brand);border-left-color:var(--brand);font-weight:500}
+.pos-cat div small{display:block;font-size:11px;color:var(--t4);margin-top:2px}
+.pos-mid{overflow-y:auto;padding:16px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:12px}
+.dish{border:1px solid var(--split);border-radius:var(--r);padding:11px;cursor:pointer;transition:.15s;
+background:var(--card);position:relative}
+.dish:hover{border-color:var(--brand);box-shadow:var(--sh);transform:translateY(-1px)}
+.dish-n{font-size:14px;font-weight:500;margin-bottom:5px;line-height:1.4}
+.dish-p{font-size:16px;font-weight:600;color:var(--er);font-variant-numeric:tabular-nums}
+.dish-p small{font-size:11px;font-weight:400}
+.dish-x{font-size:11px;color:var(--t3);margin-top:4px}
+.dish.out{opacity:.45;cursor:not-allowed}
+.dish.out::after{content:"已沽清";position:absolute;top:7px;right:7px;font-size:10px;padding:1px 5px;
+border-radius:3px;background:var(--er);color:#fff}
+.dish .qb{position:absolute;top:7px;right:7px;min-width:20px;height:20px;border-radius:10px;
+background:var(--brand);color:#fff;font-size:11px;display:grid;place-items:center;font-weight:600;padding:0 5px}
+.pos-r{border-left:1px solid var(--split);display:flex;flex-direction:column;background:var(--head)}
+.pos-rh{padding:13px 16px;border-bottom:1px solid var(--split);display:flex;align-items:center;gap:8px}
+.pos-rh h4{font-size:15px;font-weight:600}
+.cart{flex:1;overflow-y:auto;padding:10px 14px}
+.ct-i{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--split);align-items:flex-start}
+.ct-i:last-child{border:none}
+.ct-n{flex:1;font-size:14px;line-height:1.4}
+.ct-n small{display:block;font-size:11px;color:var(--t3);margin-top:2px}
+.ct-p{font-size:14px;font-variant-numeric:tabular-nums;color:var(--t1);font-weight:500;min-width:56px;text-align:right}
+.stp{display:inline-flex;align-items:center;border:1px solid var(--bd);border-radius:4px;overflow:hidden;height:24px}
+.stp b{width:24px;text-align:center;cursor:pointer;color:var(--t2);font-weight:400;line-height:22px;transition:.15s;user-select:none}
+.stp b:hover{background:var(--brand);color:#fff}
+.stp span{min-width:28px;text-align:center;font-size:13px;border-left:1px solid var(--bd);
+border-right:1px solid var(--bd);line-height:22px;font-variant-numeric:tabular-nums}
+.pos-f{padding:14px 16px;border-top:1px solid var(--split);background:var(--card)}
+.pf-r{display:flex;justify-content:space-between;font-size:13px;color:var(--t2);margin-bottom:7px}
+.pf-r.tt{font-size:15px;color:var(--t1);font-weight:600;padding-top:9px;border-top:1px dashed var(--split);margin-top:4px}
+.pf-r.tt b{font-size:24px;color:var(--er);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+
+.pay-g{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
+.pay-o{border:1.5px solid var(--bd);border-radius:var(--r-lg);padding:15px 13px;cursor:pointer;
+transition:.15s;text-align:center;position:relative}
+.pay-o:hover{border-color:var(--brand);background:var(--brand-bg)}
+.pay-o.on{border-color:var(--brand);background:var(--brand-bg);box-shadow:0 0 0 2px rgba(22,119,255,.12)}
+.pay-o.on::after{content:"✓";position:absolute;top:6px;right:9px;color:var(--brand);font-weight:700;font-size:14px}
+.pay-o u{font-size:26px;display:block;margin-bottom:7px;font-style:normal;text-decoration:none}
+.pay-o b{font-size:14px;display:block;font-weight:500}
+.pay-o small{font-size:11px;color:var(--t3);display:block;margin-top:3px}
+.pay-o.wx u{color:#07C160}.pay-o.ali u{color:#1677FF}
+
+.bill{background:var(--head);border:1px dashed var(--bd);border-radius:var(--r);padding:15px;
+font-family:"SF Mono",Consolas,monospace;font-size:13px}
+.bill-r{display:flex;justify-content:space-between;padding:3px 0;color:var(--t2)}
+.bill-r b{color:var(--t1)}
+.bill-hr{border-top:1px dashed var(--bd);margin:9px 0}
+.bill-t{display:flex;justify-content:space-between;font-size:16px;font-weight:600;color:var(--t1)}
+.bill-t b{color:var(--er);font-size:20px}
+
+/* 打印机状态 */
+.prt{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--split);
+border-radius:var(--r);background:var(--card)}
+.prt u{width:36px;height:36px;border-radius:var(--r);display:grid;place-items:center;font-size:17px;
+font-style:normal;text-decoration:none;flex-shrink:0}
+.prt.ok u{background:var(--ok-bg);color:var(--ok)}
+.prt.err u{background:var(--er-bg);color:var(--er)}
+.prt-i{flex:1}
+.prt-i b{font-size:14px;display:block;font-weight:500}
+.prt-i small{font-size:12px;color:var(--t3)}
+
+@media(max-width:1400px){.s5{grid-template-columns:repeat(3,1fr)}.pos{grid-template-columns:130px 1fr 300px}}
+@media(max-width:1100px){.k-cols{grid-template-columns:repeat(2,1fr)}.s4,.s5{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ==================== 登录 ==================== -->
+<div id="login">
+  <div class="lg-card">
+    <div class="lg-logo">◧</div>
+    <div class="lg-t">悦点 · 商家端</div>
+    <div class="lg-s">扫码点餐管理系统 v1.0</div>
+    <div class="lg-role">
+      <div class="on" onclick="pickRole(this,'店长','全部权限')">店长</div>
+      <div onclick="pickRole(this,'收银员','收银台')">收银员</div>
+      <div onclick="pickRole(this,'后厨','KDS')">后厨</div>
+    </div>
+    <div class="lg-f"><label>工号</label><input class="lg-in" value="1001" id="lgU"></div>
+    <div class="lg-f"><label>密码</label><input class="lg-in" type="password" value="123456"></div>
+    <button class="lg-btn" onclick="doLogin()">登 录</button>
+    <div class="lg-tip"><b>原型说明</b>：本页为交互原型，数据均为演示假数据。选择角色会影响可见菜单（店长可见全部）。</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:10px;text-align:center">原型构建版本：2026-08-23 23:35　<span style="color:#ffd666">★若看不到此行说明仍是旧缓存</span></div>
+  </div>
+</div>
+
+<!-- ==================== 应用外壳 ==================== -->
+<div id="shell">
+  <!-- 侧边栏 -->
+  <aside class="sider" id="sider">
+    <div class="brand"><i>◧</i><b>悦点</b></div>
+    <nav class="menu" id="menu">
+      <div class="mg-t">收银工作台</div>
+      <div class="mi on" data-p="dash"><u>◱</u><span>营业概览</span></div>
+      <div class="mi" data-p="tables"><u>▦</u><span>桌台图</span><em id="mbUnpaid">3</em></div>
+      <div class="mi" data-p="orders"><u>☰</u><span>订单管理</span></div>
+      <div class="mi" data-p="pos"><u>✎</u><span>代客点单</span></div>
+      <div class="mi" data-p="offline"><u>⎘</u><span>补录人工单</span></div>
+      <div class="mi" data-p="manual"><u>⚠</u><span>需人工处理</span><em id="mbManual">2</em></div>
+      <div class="mg-t">后厨</div>
+      <div class="mi" data-p="kds"><u>▤</u><span>KDS 大屏</span></div>
+      <div class="mi" data-p="print"><u>⎙</u><span>打印任务</span><em id="mbPrint">1</em></div>
+      <div class="mg-t">菜单与桌台</div>
+      <div class="mi" data-p="menu"><u>❏</u><span>分类与菜品</span></div>
+      <div class="mi" data-p="perhead"><u>☶</u><span>按人收费项</span></div>
+      <div class="mi" data-p="soldout"><u>⊘</u><span>沽清管理</span></div>
+      <div class="mi" data-p="import"><u>⇪</u><span>批量导入</span></div>
+      <div class="mi" data-p="tbmgr"><u>▩</u><span>桌台管理</span></div>
+      <div class="mi" data-p="qrcode"><u>▣</u><span>二维码管理</span></div>
+      <div class="mg-t">报表与对账</div>
+      <div class="mi" data-p="report"><u>▥</u><span>营业报表</span></div>
+      <div class="mi" data-p="recon"><u>⇋</u><span>多来源对账</span></div>
+      <div class="mi" data-p="refund"><u>↩</u><span>退款与核销</span></div>
+      <div class="mg-t">系统</div>
+      <div class="mi" data-p="staff"><u>☺</u><span>员工与权限</span></div>
+      <div class="mi" data-p="log"><u>◷</u><span>操作日志</span></div>
+      <div class="mi" data-p="setting"><u>⚙</u><span>系统设置</span></div>
+      <div class="mi" data-p="backup"><u>⛁</u><span>备份与恢复</span></div>
+    </nav>
+  </aside>
+
+  <!-- 主体 -->
+  <div class="main" id="main">
+    <header class="hd">
+      <div class="hd-ic" onclick="toggleSider()" title="收起侧边栏">☰</div>
+      <div class="crumb" id="crumb">收银工作台 / <b>营业概览</b></div>
+      <div class="hd-r">
+        <div class="biz" id="bizChip"><i></i><span>晚市营业中 · 17:00–21:30</span></div>
+        <div class="hd-ic" id="degradeBtn" onclick="openM('mDegrade')" title="降级模式">⚡</div>
+        <div class="hd-ic" onclick="toggleTheme()" title="亮色/暗色切换" id="thBtn">☾</div>
+        <div class="who" onclick="doLogout()">
+          <div class="avt" id="uAvt">张</div>
+          <div><span id="uName">张店长</span><small id="uRole">店长 · 工号1001</small></div>
+        </div>
+      </div>
+    </header>
+
+    <div id="banner">
+      <u>⚡</u>
+      <div><b>降级模式已开启</b> · 顾客扫码下单入口已关闭，新单请在「补录人工单」录入，收款走现金/POS</div>
+      <div class="br">
+        <button class="btn sm" onclick="go('offline')">去补录</button>
+        <button class="btn sm dan-o" onclick="setDegrade(false)">关闭降级</button>
+      </div>
+    </div>
+
+    <div class="body" id="pages">
+<!-- ========== 营业概览 ========== -->
+<section class="pg on" id="p-dash">
+  <div class="pt">
+    <h1>营业概览</h1><p>2026-08-23 周日 · 数据每 30 秒刷新</p>
+    <div class="pt-r">
+      <div class="seg"><div class="on">今日</div><div>本周</div><div>本月</div></div>
+      <button class="btn" onclick="tst('g','已刷新')">↻ 刷新</button>
+      <button class="btn pri" onclick="go('kds')">▤ 打开 KDS 大屏</button>
+    </div>
+  </div>
+
+  <div class="alert o" style="margin-bottom:16px">
+    <u>⚠</u>
+    <div><b>3 张桌未结账，合计 ¥1,286.00</b>
+    后付桌台需在清台前完成结账或走店长核销，避免跑单。挂账金额<b style="display:inline">不计入</b>当日已收营业额。</div>
+    <div class="ar"><button class="btn sm" onclick="go('tables')">查看桌台</button></div>
+  </div>
+
+  <div class="stats s5">
+    <div class="st hl"><u>¥</u><div class="st-l">今日已收营业额</div>
+      <div class="st-v">8,642<small>.50</small></div>
+      <div class="st-f"><span class="up">↑ 12.4%</span> 较昨日同时段</div></div>
+    <div class="st"><u>☰</u><div class="st-l">订单数</div>
+      <div class="st-v">96<small> 单</small></div>
+      <div class="st-f">线上 84 · 人工 12</div></div>
+    <div class="st"><u>◎</u><div class="st-l">客单价</div>
+      <div class="st-v">90<small>.03</small></div>
+      <div class="st-f"><span class="dn">↓ 2.1%</span> 较昨日</div></div>
+    <div class="st warn"><u>⏱</u><div class="st-l">未结账挂账</div>
+      <div class="st-v" style="color:var(--wn)">1,286<small>.00</small></div>
+      <div class="st-f">3 桌 · 不计入营业额</div></div>
+    <div class="st err"><u>⚠</u><div class="st-l">需人工处理</div>
+      <div class="st-v" style="color:var(--er)">2<small> 单</small></div>
+      <div class="st-f">金额不符 1 · 重复扣款 1</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:16px">
+    <div class="card">
+      <div class="ch"><h3>分时营业额</h3><p>单位：元</p>
+        <div class="ch-r"><span class="tag b"><i class="dot" style="background:var(--brand)"></i>午市 3,180</span>
+        <span class="tag g"><i class="dot" style="background:var(--ok)"></i>晚市 5,462</span></div></div>
+      <div class="cb">
+        <div class="bars">
+          <div><b>286</b><i style="height:16%"></i><span>11:00</span></div>
+          <div><b>912</b><i style="height:52%"></i><span>11:30</span></div>
+          <div><b>1,105</b><i style="height:63%"></i><span>12:00</span></div>
+          <div><b>648</b><i style="height:37%"></i><span>12:30</span></div>
+          <div><b>229</b><i style="height:13%"></i><span>13:00</span></div>
+          <div><b>0</b><i style="height:1%"></i><span>14:00</span></div>
+          <div><b>0</b><i style="height:1%"></i><span>15:00</span></div>
+          <div><b>412</b><i class="a" style="height:24%"></i><span>17:00</span></div>
+          <div><b>1,386</b><i class="a" style="height:79%"></i><span>17:30</span></div>
+          <div><b>1,742</b><i class="a" style="height:100%"></i><span>18:00</span></div>
+          <div><b>1,254</b><i class="a" style="height:72%"></i><span>18:30</span></div>
+          <div><b>668</b><i class="a" style="height:38%"></i><span>19:00</span></div>
+        </div>
+        <div class="hint" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--split)">
+          峰值 18:00–18:30，出餐平均 <b>9 分 12 秒</b>。营业额按<b>结账时间</b>归属，跨市挂账单计入结账所在时段。
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><h3>收款渠道构成</h3><p>今日已收</p></div>
+      <div class="cb">
+        <div style="display:flex;gap:20px;align-items:center">
+          <div class="donut" style="background:conic-gradient(#07C160 0 46%,#1677FF 46% 79%,#FAAD14 79% 93%,#722ED1 93% 100%)">
+            <div class="donut-c"><b>¥8,642</b><small>96 单</small></div>
+          </div>
+          <div class="lgd">
+            <div><i style="background:#07C160"></i><span>微信支付</span><b>3,975.60</b></div>
+            <div><i style="background:#1677FF"></i><span>支付宝</span><b>2,852.05</b></div>
+            <div><i style="background:#FAAD14"></i><span>现金</span><b>1,210.00</b></div>
+            <div><i style="background:#722ED1"></i><span>POS 刷卡</span><b>604.85</b></div>
+          </div>
+        </div>
+        <div class="alert b" style="margin-top:16px;font-size:12px">
+          <u>ⓘ</u><div>微信与支付宝资金进<b style="display:inline">两个不同账户</b>，需分别提现、分别核对。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div class="card">
+      <div class="ch"><h3>热销菜品 TOP 6</h3><div class="ch-r"><button class="btn sm txt" onclick="go('soldout')">沽清管理 →</button></div></div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:14px">
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>宫保鸡丁</span><b class="num">42 份</b></div><div class="prog"><i style="width:100%"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>水煮牛肉</span><b class="num">38 份</b></div><div class="prog"><i style="width:90%"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>蒜蓉油麦菜</span><b class="num">31 份</b></div><div class="prog"><i style="width:74%"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>酸辣土豆丝</span><b class="num">27 份</b></div><div class="prog"><i style="width:64%"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>米饭</span><b class="num">86 碗</b></div><div class="prog"><i style="width:58%;background:var(--ok)"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:var(--er)">口水鸡（已沽清）</span><b class="num">19 份</b></div><div class="prog"><i style="width:45%;background:var(--er)"></i></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><h3>系统健康</h3><div class="ch-r"><span class="tag g">整体正常</span></div></div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:11px">
+        <div class="prt ok"><u>✓</u><div class="prt-i"><b>微信支付</b><small>成功率 99.6% · 今日 47 笔</small></div><span class="tag g">正常</span></div>
+        <div class="prt ok"><u>✓</u><div class="prt-i"><b>支付宝</b><small>成功率 99.1% · 今日 34 笔</small></div><span class="tag g">正常</span></div>
+        <div class="prt err"><u>✕</u><div class="prt-i"><b>后厨打印机 · 热菜档</b><small>飞鹅 FE-8021 · 3 分钟前离线</small></div>
+          <button class="btn sm dan-o" onclick="go('print')">去补打</button></div>
+        <div class="prt ok"><u>✓</u><div class="prt-i"><b>数据库备份</b><small>今日 03:00 全量成功 · WAL 归档正常</small></div><span class="tag g">正常</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 桌台图 ========== -->
+<section class="pg" id="p-tables">
+  <div class="pt">
+    <h1>桌台图</h1><p>共 24 桌 · 就餐中 9 · 未结账 3 · 空闲 11 · 待清台 1</p>
+    <div class="pt-r">
+      <div class="seg"><div class="on">全部区域</div><div>大厅</div><div>包间</div><div>露台</div></div>
+      <button class="btn" onclick="tst('b','已切换为列表视图（原型示意）')">☰ 列表视图</button>
+      <button class="btn pri" onclick="go('pos')">✎ 代客点单</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><div class="cb" style="padding:13px 20px">
+    <div class="tlgd">
+      <div><i style="background:var(--bd)"></i>空闲</div>
+      <div><i style="background:var(--brand)"></i>就餐中（已结账/先付）</div>
+      <div><i style="background:var(--er)"></i>未结账（后付挂账）</div>
+      <div><i style="background:var(--wn)"></i>待清台</div>
+      <div><i style="background:var(--cy)"></i>并桌</div>
+      <div style="margin-left:auto;color:var(--t3)">🔒 = 结账中锁定，禁止加菜</div>
+    </div>
+  </div></div>
+
+  <div class="zone">
+    <div class="zh"><h3>大厅 · 靠窗区</h3><span class="zl">A01–A08 · 8 桌</span>
+      <div class="zr"><span class="tag d">默认先付</span></div></div>
+    <div class="tgrid" id="zoneA"></div>
+  </div>
+  <div class="zone">
+    <div class="zh"><h3>包间 · 二楼</h3><span class="zl">B01–B06 · 6 桌</span>
+      <div class="zr"><span class="tag p">默认后付</span></div></div>
+    <div class="tgrid" id="zoneB"></div>
+  </div>
+  <div class="zone">
+    <div class="zh"><h3>露台</h3><span class="zl">C01–C04 · 4 桌</span>
+      <div class="zr"><span class="tag d">默认先付</span></div></div>
+    <div class="tgrid" id="zoneC"></div>
+  </div>
+</section>
+
+<!-- ========== 订单管理 ========== -->
+<section class="pg" id="p-orders">
+  <div class="pt"><h1>订单管理</h1><p>今日 96 单 · 支持按渠道、状态、结账模式筛选</p>
+    <div class="pt-r"><button class="btn" onclick="tst('g','已导出 Excel（原型示意）')">⇩ 导出</button></div></div>
+
+  <div class="card">
+    <div class="cb" style="padding:16px 20px;border-bottom:1px solid var(--split)">
+      <div class="fbar">
+        <div class="fi"><label>订单号/桌号</label><input class="inp" placeholder="搜索" style="width:180px"></div>
+        <div class="fi"><label>状态</label><select class="sel"><option>全部</option><option>待支付</option><option>未结账</option><option>已支付</option><option>备餐中</option><option>已出餐</option><option>已完成</option><option>已取消</option><option>已退款</option><option>需人工处理</option></select></div>
+        <div class="fi"><label>渠道</label><select class="sel"><option>全部</option><option>微信</option><option>支付宝</option><option>现金</option><option>POS</option></select></div>
+        <div class="fi"><label>模式</label><select class="sel"><option>全部</option><option>先付</option><option>后付</option></select></div>
+        <div class="fi"><label>来源</label><select class="sel"><option>全部</option><option>线上扫码</option><option>人工补录</option><option>员工代点</option></select></div>
+        <button class="btn pri" onclick="tst('b','已筛选')">查询</button>
+        <button class="btn">重置</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="on">全部 96</div><div>未结账 3</div><div>待支付 2</div><div>备餐中 5</div>
+      <div>已完成 84</div><div style="color:var(--er)">需人工处理 2</div>
+    </div>
+    <div class="cb p0"><table><thead><tr>
+      <th>订单号</th><th>桌号</th><th>金额</th><th>模式</th><th>渠道</th><th>来源</th><th>状态</th><th>下单时间</th><th style="width:140px">操作</th>
+    </tr></thead><tbody id="ordBody"></tbody></table></div>
+    <div class="cb" style="display:flex;align-items:center;justify-content:space-between">
+      <span class="hint">共 96 条</span>
+      <div style="display:flex;gap:6px"><button class="btn sm">上一页</button>
+      <button class="btn sm pri">1</button><button class="btn sm">2</button><button class="btn sm">3</button>
+      <button class="btn sm">下一页</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 需人工处理 ========== -->
+<section class="pg" id="p-manual">
+  <div class="pt"><h1>需人工处理</h1><p>金额不符、重复扣款、跨渠道异常单，阻断自动流转，等待店长介入</p></div>
+  <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+    <div><b>这些单已从正常订单流中隔离</b>
+    系统检测到资金异常后主动阻断，不会自动出单也不会自动退款。请核对渠道流水后处理，所有操作均记入操作日志。</div></div>
+
+  <div class="card"><div class="cb p0"><table><thead><tr>
+    <th>订单号</th><th>桌号</th><th>异常类型</th><th>应收</th><th>实收</th><th>渠道</th><th>发生时间</th><th style="width:180px">操作</th>
+  </tr></thead><tbody>
+    <tr class="tr-warn">
+      <td><b class="mono">JF20260823-0079</b></td><td><b>B03</b></td>
+      <td><span class="tag r">重复扣款</span></td>
+      <td><b class="num">¥328.00</b></td><td><b class="num" style="color:var(--er)">¥656.00</b></td>
+      <td><span class="tag g">微信 ×2</span></td><td class="mono">18:42:11</td>
+      <td><div class="ops"><button class="btn sm dan" onclick="openM('mManual')">退回多收</button>
+      <button class="btn sm txt" onclick="openM('mOrder')">详情</button></div></td>
+    </tr>
+    <tr class="tr-warn">
+      <td><b class="mono">JF20260823-0064</b></td><td><b>A05</b></td>
+      <td><span class="tag o">金额不符</span></td>
+      <td><b class="num">¥186.00</b></td><td><b class="num" style="color:var(--wn)">¥180.00</b></td>
+      <td><span class="tag b">支付宝</span></td><td class="mono">18:07:53</td>
+      <td><div class="ops"><button class="btn sm pri" onclick="openM('mManual')">核对处理</button>
+      <button class="btn sm txt" onclick="openM('mOrder')">详情</button></div></td>
+    </tr>
+  </tbody></table></div></div>
+
+  <div class="card"><div class="ch"><h3>处理规则（系统内置）</h3></div><div class="cb">
+    <dl class="kv">
+      <dt>重复扣款</dt><dd>数据库 <code class="mono">uniq_order_success_payment</code> 已阻断第二笔入账；多收那笔<b>按原渠道自动退款</b>，严禁跨渠道退。</dd>
+      <dt>金额不符</dt><dd>以<b>服务端重算金额</b>为准。少收补收或核销差额，多收退款，必须记录原因与工号。</dd>
+      <dt>换渠道重付</dt><dd>关闭原渠道单据 + 生成新 <code class="mono">out_trade_no</code>；若原渠道延迟回调成功，自动退款后到的那笔。</dd>
+      <dt>处理时限</dt><dd>建议打烊前清零。营业高峰（11:00–14:00 / 17:00–21:30）只记录不操作退款，避免加重故障。</dd>
+    </dl>
+  </div></div>
+</section>
+
+<!-- ========== 代客点单 ========== -->
+<section class="pg" id="p-pos">
+  <div class="pt"><h1>代客点单</h1><p>顾客不便扫码时由服务员代点 · 常规功能，非降级操作</p>
+    <div class="pt-r">
+      <div class="fi"><label>当前桌台</label><select class="sel" id="posTable" style="min-width:190px">
+        <option>A03 · 大厅靠窗 · 4人 · 先付</option>
+        <option>B02 · 包间二楼 · 10人 · 后付</option>
+        <option>C01 · 露台 · 4人 · 先付</option>
+      </select></div>
+      <span class="tag p">员工代点 source=staff</span>
+    </div>
+  </div>
+  <div class="pos">
+    <div class="pos-cat" id="posCat"></div>
+    <div class="pos-mid"><div class="dgrid" id="posDish"></div></div>
+    <div class="pos-r">
+      <div class="pos-rh"><h4>已选菜品</h4><span class="tag b" id="cartCnt">0 项</span>
+        <button class="btn sm txt" style="margin-left:auto" onclick="clearCart()">清空</button></div>
+      <div class="cart" id="cartBox"><div class="empty" style="padding:40px 12px"><u>☰</u><p>点击左侧菜品加入</p></div></div>
+      <div class="pos-f">
+        <div class="pf-r"><span>小计</span><span class="num" id="cSub">¥0.00</span></div>
+        <div class="pf-r"><span>餐位费 ¥2 × 4</span><span class="num">¥8.00</span></div>
+        <div class="pf-r tt"><span>应付</span><b id="cTot">¥8.00</b></div>
+        <div style="display:flex;gap:9px;margin-top:12px">
+          <button class="btn" style="flex:1" onclick="tst('o','已挂单，未提交后厨')">挂单</button>
+          <button class="btn pri" style="flex:2" onclick="submitPos()">提交并出单</button>
+        </div>
+        <div class="hint" style="margin-top:9px">后付桌台提交即出单，账单挂到桌台会话；先付桌台需先收款。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 补录人工单 ========== -->
+<section class="pg" id="p-offline">
+  <div class="pt"><h1>补录人工单</h1><p>系统故障期间的纸笔单事后补录，保证营业额与对账完整</p></div>
+  <div class="alert b" style="margin-bottom:16px"><u>ⓘ</u>
+    <div><b>补录单不走支付回调</b>
+    钱已通过现金/POS 收取，未经过微信/支付宝接口。补录仅为让线下单「可见、可对账」，创建即标记为已支付已完成。</div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:16px">
+    <div class="card"><div class="ch"><h3>补录订单信息</h3></div><div class="cb">
+      <div class="f3">
+        <div class="fg"><label><i>*</i>桌号</label><select class="sel"><option>A01</option><option>A02</option><option selected>A05</option><option>B03</option></select></div>
+        <div class="fg"><label><i>*</i>收款方式</label><select class="sel"><option>现金 cash</option><option>POS 刷卡 pos</option></select></div>
+        <div class="fg"><label><i>*</i>收款金额</label><input class="inp" value="286.00"></div>
+      </div>
+      <div class="f2">
+        <div class="fg"><label><i>*</i>发生时间</label><input class="inp" value="2026-08-23 18:35"></div>
+        <div class="fg"><label><i>*</i>收银员工号</label><input class="inp" value="1001（张店长）" readonly></div>
+      </div>
+      <div class="fg"><label>菜品明细（可选，填了报表更准）</label>
+        <textarea class="inp" rows="4" placeholder="每行一条：菜名 × 数量 × 单价&#10;宫保鸡丁 x1 x48&#10;米饭 x4 x3"></textarea>
+        <small>不填明细也能对账，但热销菜品统计会漏掉这单。建议至少填主菜。</small></div>
+      <div class="fg"><label>备注</label><input class="inp" placeholder="如：18:30 打印机离线，纸笔点单"></div>
+      <div style="display:flex;gap:10px;padding-top:6px">
+        <button class="btn pri" onclick="tst('g','补录成功，已计入当日营业额')">确认补录</button>
+        <button class="btn">重置</button>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="ch"><h3>今日已补录</h3><div class="ch-r"><span class="tag o">12 单 · ¥1,210</span></div></div>
+      <div class="cb p0"><table><thead><tr><th>桌号</th><th>金额</th><th>方式</th><th>时间</th></tr></thead><tbody>
+        <tr><td><b>A05</b></td><td class="num">¥286.00</td><td><span class="tag o">现金</span></td><td class="mono">18:35</td></tr>
+        <tr><td><b>A02</b></td><td class="num">¥168.00</td><td><span class="tag o">现金</span></td><td class="mono">18:28</td></tr>
+        <tr><td><b>B01</b></td><td class="num">¥604.85</td><td><span class="tag p">POS</span></td><td class="mono">18:22</td></tr>
+        <tr><td><b>A07</b></td><td class="num">¥151.15</td><td><span class="tag o">现金</span></td><td class="mono">18:15</td></tr>
+      </tbody></table></div>
+      <div class="cb"><div class="alert o" style="font-size:12px"><u>⚠</u>
+        <div>补录金额需与实际现金/POS 流水一致，打烊前请在<b>多来源对账</b>核对差异。</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 打印任务 ========== -->
+<section class="pg" id="p-print">
+  <div class="pt"><h1>打印任务</h1><p>云打印推送记录 · 失败可手动补打</p>
+    <div class="pt-r"><button class="btn" onclick="tst('b','已重试全部失败任务')">↻ 重试全部失败</button></div></div>
+
+  <div class="stats s4">
+    <div class="st"><div class="st-l">今日推送</div><div class="st-v">118</div><div class="st-f">含加菜与补打</div></div>
+    <div class="st"><div class="st-l">成功</div><div class="st-v" style="color:var(--ok)">115</div><div class="st-f">成功率 97.5%</div></div>
+    <div class="st err"><div class="st-l">失败待补打</div><div class="st-v" style="color:var(--er)">1</div><div class="st-f">热菜档离线</div></div>
+    <div class="st"><div class="st-l">平均出单耗时</div><div class="st-v">1.8<small>s</small></div><div class="st-f">厂商云 API</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><div class="ch"><h3>打印机状态</h3>
+    <div class="ch-r"><button class="btn sm" onclick="tst('b','已发送测试页')">打印测试页</button></div></div>
+    <div class="cb" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div class="prt err"><u>✕</u><div class="prt-i"><b>热菜档</b><small>飞鹅 FE-8021 · SN:918****231</small></div><span class="tag r">离线</span></div>
+      <div class="prt ok"><u>✓</u><div class="prt-i"><b>凉菜档</b><small>飞鹅 FE-8021 · SN:918****232</small></div><span class="tag g">在线</span></div>
+      <div class="prt ok"><u>✓</u><div class="prt-i"><b>吧台</b><small>芯烨 XP-N160II · SN:772****045</small></div><span class="tag g">在线</span></div>
+    </div>
+  </div>
+
+  <div class="card"><div class="cb p0"><table><thead><tr>
+    <th>任务号</th><th>订单号</th><th>桌号</th><th>目标打印机</th><th>类型</th><th>状态</th><th>推送时间</th><th style="width:150px">操作</th>
+  </tr></thead><tbody>
+    <tr class="tr-warn"><td class="mono">PT-2418</td><td class="mono">JF20260823-0093</td><td><b>A03</b></td>
+      <td>热菜档</td><td>后厨单</td><td><span class="tag r">失败 · 打印机离线</span></td><td class="mono">18:58:41</td>
+      <td><div class="ops"><button class="btn sm pri" onclick="tst('g','已补打到凉菜档')">补打</button>
+      <button class="btn sm txt" onclick="openM('mReprint')">改目标</button></div></td></tr>
+    <tr><td class="mono">PT-2417</td><td class="mono">JF20260823-0093</td><td><b>A03</b></td>
+      <td>吧台</td><td>饮品单</td><td><span class="tag g">成功</span></td><td class="mono">18:58:40</td>
+      <td><button class="btn sm txt" onclick="tst('b','已重打')">重打</button></td></tr>
+    <tr><td class="mono">PT-2416</td><td class="mono">JF20260823-0092</td><td><b>B02</b></td>
+      <td>凉菜档</td><td>后厨单</td><td><span class="tag g">成功</span></td><td class="mono">18:56:12</td>
+      <td><button class="btn sm txt" onclick="tst('b','已重打')">重打</button></td></tr>
+    <tr><td class="mono">PT-2415</td><td class="mono">JF20260823-0091</td><td><b>A08</b></td>
+      <td>吧台</td><td>结账小票</td><td><span class="tag g">成功</span></td><td class="mono">18:54:03</td>
+      <td><button class="btn sm txt" onclick="tst('b','已重打')">重打</button></td></tr>
+    <tr><td class="mono">PT-2414</td><td class="mono">JF20260823-0090</td><td><b>C02</b></td>
+      <td>热菜档</td><td>后厨单</td><td><span class="tag o">重试 1 次后成功</span></td><td class="mono">18:51:33</td>
+      <td><button class="btn sm txt" onclick="tst('b','已重打')">重打</button></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<!-- ========== 分类与菜品 ========== -->
+<section class="pg" id="p-menu">
+  <div class="pt"><h1>分类与菜品</h1><p>6 个分类 · 78 个菜品 · 改价与沽清实时同步微信/支付宝两端</p>
+    <div class="pt-r"><button class="btn" onclick="go('import')">⇪ 批量导入</button>
+      <button class="btn" onclick="openM('mCat')">+ 新增分类</button>
+      <button class="btn pri" onclick="openM('mDish')">+ 新增菜品</button></div></div>
+
+  <div style="display:grid;grid-template-columns:230px 1fr;gap:16px">
+    <div class="card"><div class="ch"><h3>分类</h3><p>拖拽排序</p></div>
+      <div class="cb p0"><div class="pos-cat" id="catList" style="background:transparent;border:none">
+        <div class="on" data-cat="热菜" data-count="32">热菜 <small>32 个菜品</small></div>
+        <div data-cat="凉菜" data-count="14">凉菜 <small>14 个菜品</small></div>
+        <div data-cat="汤羹" data-count="8">汤羹 <small>8 个菜品</small></div>
+        <div data-cat="主食" data-count="9">主食 <small>9 个菜品</small></div>
+        <div data-cat="饮品" data-count="12">饮品 <small>12 个菜品</small></div>
+        <div data-cat="酒水" data-count="3">酒水 <small>3 个菜品</small></div>
+      </div></div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><h3 id="dishCatName">热菜</h3><p id="dishCatCount">32 个菜品</p>
+        <div class="ch-r"><input class="inp" placeholder="搜索菜名" style="width:160px">
+          <select class="sel" style="width:120px"><option>全部状态</option><option>在售</option><option>已沽清</option></select></div></div>
+      <div class="cb p0"><table><thead><tr>
+        <th style="width:56px">排序</th><th>菜名</th><th>价格</th><th>规格/加料</th><th>出单档口</th><th>状态</th><th style="width:150px">操作</th>
+      </tr></thead><tbody>
+        <tr><td class="mono">1</td><td><b>宫保鸡丁</b><br><small class="hint">今日售 42 份</small></td>
+          <td><b class="num">¥48.00</b></td><td><span class="tag d">无规格</span></td><td>热菜档</td>
+          <td><span class="tag g">在售</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="openM('mDish')">编辑</button>
+          <button class="btn sm txt" onclick="tst('o','已沽清，双端菜单已灰显')">沽清</button></div></td></tr>
+        <tr><td class="mono">2</td><td><b>水煮牛肉</b><br><small class="hint">今日售 38 份</small></td>
+          <td><b class="num">¥68.00</b></td><td><span class="tag b">规格 2 种</span></td><td>热菜档</td>
+          <td><span class="tag g">在售</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="openM('mDish')">编辑</button>
+          <button class="btn sm txt" onclick="tst('o','已沽清，双端菜单已灰显')">沽清</button></div></td></tr>
+        <tr><td class="mono">3</td><td><b>麻婆豆腐</b><br><small class="hint">今日售 22 份</small></td>
+          <td><b class="num">¥32.00</b></td><td><span class="tag c">加料 3 种</span></td><td>热菜档</td>
+          <td><span class="tag g">在售</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="openM('mDish')">编辑</button>
+          <button class="btn sm txt" onclick="tst('o','已沽清，双端菜单已灰显')">沽清</button></div></td></tr>
+        <tr><td class="mono">4</td><td><b>口水鸡</b><br><small class="hint">今日售 19 份</small></td>
+          <td><b class="num">¥38.00</b></td><td><span class="tag d">无规格</span></td><td>凉菜档</td>
+          <td><span class="tag r">已沽清</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="openM('mDish')">编辑</button>
+          <button class="btn sm txt" onclick="tst('g','已恢复在售')">恢复</button></div></td></tr>
+        <tr><td class="mono">5</td><td><b>蒜蓉油麦菜</b><br><small class="hint">今日售 31 份</small></td>
+          <td><b class="num">¥26.00</b></td><td><span class="tag d">无规格</span></td><td>热菜档</td>
+          <td><span class="tag g">在售</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="openM('mDish')">编辑</button>
+          <button class="btn sm txt" onclick="tst('o','已沽清，双端菜单已灰显')">沽清</button></div></td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 沽清管理 ========== -->
+<section class="pg" id="p-soldout">
+  <div class="pt"><h1>沽清管理</h1><p>切换开关立即经 Redis 推送到微信/支付宝两端顾客菜单</p>
+    <div class="pt-r"><button class="btn" onclick="tst('g','已一键恢复全部菜品')">↻ 全部恢复在售</button></div></div>
+  <div class="alert o" style="margin-bottom:16px"><u>⚠</u>
+    <div><b>沽清是双重保险</b>
+    菜单实时灰显只是第一层；顾客下单瞬间服务端还会二次校验库存，防止「点的时候还有、提交时已卖完」引发后厨无货纠纷。</div></div>
+
+  <div class="card"><div class="ch"><h3>热菜 · 32 项</h3>
+    <div class="ch-r"><span class="tag r">1 项已沽清</span></div></div>
+    <div class="cb" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div class="swl" style="padding:12px;border:1px solid var(--split);border-radius:var(--r)">
+        <div style="flex:1"><b>宫保鸡丁</b><div class="hint">¥48.00 · 热菜档</div></div>
+        <div class="sw on" onclick="tglSold(this)"></div></div>
+      <div class="swl" style="padding:12px;border:1px solid var(--split);border-radius:var(--r)">
+        <div style="flex:1"><b>水煮牛肉</b><div class="hint">¥68.00 · 热菜档</div></div>
+        <div class="sw on" onclick="tglSold(this)"></div></div>
+      <div class="swl" style="padding:12px;border:1px solid var(--er-bd);border-radius:var(--r);background:var(--er-bg)">
+        <div style="flex:1"><b>口水鸡</b><div class="hint">¥38.00 · 凉菜档 · <span style="color:var(--er)">18:40 沽清</span></div></div>
+        <div class="sw" onclick="tglSold(this)"></div></div>
+      <div class="swl" style="padding:12px;border:1px solid var(--split);border-radius:var(--r)">
+        <div style="flex:1"><b>麻婆豆腐</b><div class="hint">¥32.00 · 热菜档</div></div>
+        <div class="sw on" onclick="tglSold(this)"></div></div>
+      <div class="swl" style="padding:12px;border:1px solid var(--split);border-radius:var(--r)">
+        <div style="flex:1"><b>蒜蓉油麦菜</b><div class="hint">¥26.00 · 热菜档</div></div>
+        <div class="sw on" onclick="tglSold(this)"></div></div>
+      <div class="swl" style="padding:12px;border:1px solid var(--split);border-radius:var(--r)">
+        <div style="flex:1"><b>酸辣土豆丝</b><div class="hint">¥22.00 · 热菜档</div></div>
+        <div class="sw on" onclick="tglSold(this)"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 批量导入 ========== -->
+<section class="pg" id="p-import">
+  <div class="pt"><h1>菜品批量导入</h1><p>二维火导出数据转换后导入 · 上百个菜手工录入不现实</p>
+    <div class="pt-r"><button class="btn" onclick="tst('b','模板已下载')">⇩ 下载 Excel 模板</button></div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+    <div class="card">
+      <div class="ch"><h3>导入向导</h3><p>第 2 步 / 共 3 步：字段映射与校验</p></div>
+      <div class="cb">
+        <div style="border:2px dashed var(--bd);border-radius:var(--r-lg);padding:26px;text-align:center;margin-bottom:18px;background:var(--head)">
+          <div style="font-size:32px;opacity:.3;margin-bottom:8px">⇪</div>
+          <div style="font-size:14px;margin-bottom:4px"><b>菜品数据_二维火导出_20260823.xlsx</b></div>
+          <div class="hint">78 行 · 已解析 · <a onclick="tst('b','请重新选择文件')">重新上传</a></div>
+        </div>
+
+        <h4 style="font-size:14px;margin-bottom:11px">字段映射</h4>
+        <table style="margin-bottom:18px"><thead><tr><th>Excel 列</th><th>示例值</th><th>映射到系统字段</th></tr></thead><tbody>
+          <tr><td class="mono">A · 菜品名称</td><td>宫保鸡丁</td><td><select class="sel"><option>dishes.name（菜名）</option></select></td></tr>
+          <tr><td class="mono">B · 分类</td><td>热菜</td><td><select class="sel"><option>categories.name（分类）</option></select></td></tr>
+          <tr><td class="mono">C · 售价</td><td>48.00</td><td><select class="sel"><option>dishes.price（价格）</option></select></td></tr>
+          <tr><td class="mono">D · 规格</td><td>小份/大份</td><td><select class="sel"><option>dish_specs（规格）</option></select></td></tr>
+          <tr><td class="mono">E · 打印分组</td><td>热菜</td><td><select class="sel"><option>dishes.station（出单档口）</option></select></td></tr>
+          <tr><td class="mono">F · 备注</td><td>—</td><td><select class="sel"><option style="color:var(--t3)">不导入</option></select></td></tr>
+        </tbody></table>
+
+        <div class="alert o" style="margin-bottom:16px"><u>⚠</u>
+          <div><b>校验发现 3 处问题（不阻断导入，跳过或修正后再导）</b>
+          <div style="margin-top:6px;line-height:1.9">
+          · 第 41 行「精酿啤酒」价格为空 → <b>将跳过</b><br>
+          · 第 52 行「时令蔬菜」分类「时蔬」不存在 → <b>自动新建分类</b><br>
+          · 第 66 行「米饭」与已有菜品重名 → <b>覆盖价格</b>
+          </div></div></div>
+
+        <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+          <span>导入后默认设为「在售」</span></label></div>
+        <div class="fg"><label class="swl"><div class="sw" onclick="tglSw(this)"></div>
+          <span>清空现有菜品后全量替换（危险，建议关闭）</span></label></div>
+
+        <div style="display:flex;gap:10px;padding-top:6px">
+          <button class="btn">上一步</button>
+          <button class="btn pri" onclick="tst('g','导入成功：新增 74，覆盖 1，跳过 3')">开始导入 75 条</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><div class="ch"><h3>导入须知</h3></div><div class="cb">
+      <dl class="kv" style="font-size:13px">
+        <dt>图片</dt><dd>二维火通常<b>导不出图片</b>，需在菜品编辑页单独批量上传，或先无图上线后补。</dd>
+        <dt>规格与加料</dt><dd>用 <code class="mono">/</code> 分隔多规格；加料需在导入后逐个配置，Excel 难以表达嵌套结构。</dd>
+        <dt>档口</dt><dd>必须映射正确，否则出单会打到错误打印机。导入后建议抽查 5 个菜试打。</dd>
+        <dt>价格</dt><dd>只认数字，带「元」字会解析失败。改价后<b>实时同步双端</b>。</dd>
+        <dt>可回滚</dt><dd>每次导入生成一个批次号，导错可整批撤销（保留 7 天）。</dd>
+      </dl>
+      <div class="alert b" style="margin-top:14px;font-size:12px"><u>ⓘ</u>
+        <div>历史导入批次：<b>3 次</b>，最近 2026-08-20 导入 12 条。<a onclick="tst('b','原型示意')">查看记录</a></div></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 桌台管理 ========== -->
+<section class="pg" id="p-tbmgr">
+  <div class="pt"><h1>桌台管理</h1><p>24 桌 · 3 个区域 · 位置与结账模式在此配置</p>
+    <div class="pt-r"><button class="btn" onclick="openM('mBatch')">⚙ 批量设置结账模式</button>
+      <button class="btn" onclick="openM('mZone')">+ 新增区域</button>
+      <button class="btn pri" onclick="openM('mTable')">+ 新增桌台</button></div></div>
+
+  <div class="alert b" style="margin-bottom:16px"><u>ⓘ</u>
+    <div><b>结账模式修改仅对新开台生效</b>
+    正在进行中的会话不受影响，避免顾客吃到一半规则突变。包间建议后付（正餐加菜顺畅），散台建议先付（零跑单风险）。</div></div>
+
+  <div class="card">
+    <div class="ch"><h3>桌台列表</h3>
+      <div class="ch-r"><select class="sel" style="width:130px"><option>全部区域</option><option>大厅靠窗</option><option>包间二楼</option><option>露台</option></select>
+        <select class="sel" style="width:130px"><option>全部模式</option><option>先付</option><option>后付</option></select></div></div>
+    <div class="cb p0"><table><thead><tr>
+      <th style="width:40px"><input type="checkbox"></th><th>桌号</th><th>区域</th><th>位置备注</th><th>座位数</th>
+      <th>结账模式</th><th>当前状态</th><th>二维码版本</th><th style="width:190px">操作</th>
+    </tr></thead><tbody>
+      <tr><td><input type="checkbox"></td><td><b>A01</b></td><td>大厅靠窗</td><td class="hint">进门左侧第 1 桌</td><td class="num">4</td>
+        <td><span class="tag d">先付</span></td><td><span class="tag d">空闲</span></td><td class="mono">v1</td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openM('mTable')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已打开二维码预览')">二维码</button>
+        <button class="btn sm txt" style="color:var(--er)" onclick="tst('o','原型示意：需先确认无活跃会话')">删除</button></div></td></tr>
+      <tr><td><input type="checkbox"></td><td><b>A03</b></td><td>大厅靠窗</td><td class="hint">窗边第 3 桌</td><td class="num">4</td>
+        <td><span class="tag d">先付</span></td><td><span class="tag b">就餐中</span></td><td class="mono">v1</td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openM('mTable')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已打开二维码预览')">二维码</button>
+        <button class="btn sm txt" disabled>删除</button></div></td></tr>
+      <tr><td><input type="checkbox"></td><td><b>B02</b></td><td>包间二楼</td><td class="hint">牡丹厅 · 靠楼梯</td><td class="num">10</td>
+        <td><span class="tag p">后付</span></td><td><span class="tag r">未结账 ¥1,286</span></td><td class="mono">v2</td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openM('mTable')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已打开二维码预览')">二维码</button>
+        <button class="btn sm txt" disabled>删除</button></div></td></tr>
+      <tr><td><input type="checkbox"></td><td><b>B03</b></td><td>包间二楼</td><td class="hint">兰花厅</td><td class="num">12</td>
+        <td><span class="tag p">后付</span></td><td><span class="tag b">就餐中</span></td><td class="mono">v2</td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openM('mTable')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已打开二维码预览')">二维码</button>
+        <button class="btn sm txt" disabled>删除</button></div></td></tr>
+      <tr><td><input type="checkbox"></td><td><b>C01</b></td><td>露台</td><td class="hint">遮阳伞下 · 靠栏杆</td><td class="num">4</td>
+        <td><span class="tag d">先付</span></td><td><span class="tag o">待清台</span></td><td class="mono">v1</td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openM('mTable')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已打开二维码预览')">二维码</button>
+        <button class="btn sm txt" style="color:var(--er)" onclick="tst('o','原型示意')">删除</button></div></td></tr>
+    </tbody></table></div>
+  </div>
+</section>
+
+<!-- ========== 二维码管理 ========== -->
+<section class="pg" id="p-qrcode">
+  <div class="pt"><h1>二维码管理</h1><p>普通链接二维码（一码双扫）· 支持批量生成与吊销换版</p>
+    <div class="pt-r"><button class="btn" onclick="tst('b','已导出 PDF，可直接送印刷')">⇩ 导出桌贴 PDF</button>
+      <button class="btn pri" onclick="openM('mQr')">▣ 批量生成</button></div></div>
+
+  <div class="alert o" style="margin-bottom:16px"><u>⚠</u>
+    <div><b>为什么不用小程序码</b>
+    微信小程序码与支付宝小程序码互不通用，一张桌不可能贴两个码让顾客挑。所以桌贴统一用<b>带签名的普通链接二维码</b>，
+    由两个平台各自配置「扫普通链接码跳小程序」规则，未命中规则时落到中间页按 UA 分流。</div></div>
+
+  <div class="stats s4">
+    <div class="st"><div class="st-l">已生成桌贴</div><div class="st-v">24</div><div class="st-f">覆盖全部桌台</div></div>
+    <div class="st"><div class="st-l">当前主版本</div><div class="st-v">v2</div><div class="st-f">包间区已换版</div></div>
+    <div class="st"><div class="st-l">今日扫码量</div><div class="st-v">312</div><div class="st-f">微信 198 · 支付宝 114</div></div>
+    <div class="st warn"><div class="st-l">上次巡检</div><div class="st-v" style="font-size:20px">3 天前</div><div class="st-f">建议每周巡检防掉包</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:16px">
+    <div class="card"><div class="ch"><h3>二维码批次</h3></div>
+      <div class="cb p0"><table><thead><tr><th>批次</th><th>范围</th><th>版本</th><th>生成时间</th><th>状态</th><th style="width:150px">操作</th></tr></thead><tbody>
+        <tr><td class="mono">QR-0003</td><td>包间 B01–B06</td><td class="mono">v2</td><td class="mono">2026-08-20 10:12</td>
+          <td><span class="tag g">生效中</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="tst('b','已下载')">下载</button>
+          <button class="btn sm txt" style="color:var(--er)" onclick="openM('mRevoke')">吊销</button></div></td></tr>
+        <tr><td class="mono">QR-0002</td><td>大厅 A01–A08 / 露台 C01–C04</td><td class="mono">v1</td><td class="mono">2026-08-15 09:30</td>
+          <td><span class="tag g">生效中</span></td>
+          <td><div class="ops"><button class="btn sm txt" onclick="tst('b','已下载')">下载</button>
+          <button class="btn sm txt" style="color:var(--er)" onclick="openM('mRevoke')">吊销</button></div></td></tr>
+        <tr><td class="mono">QR-0001</td><td>包间 B01–B06</td><td class="mono">v1</td><td class="mono">2026-08-10 14:02</td>
+          <td><span class="tag d">已吊销</span></td>
+          <td><span class="hint">2026-08-20 换版</span></td></tr>
+      </tbody></table></div>
+    </div>
+
+    <div class="card"><div class="ch"><h3>桌贴预览 · A03</h3></div><div class="cb" style="text-align:center">
+      <div style="width:170px;height:170px;margin:0 auto 14px;border:1px solid var(--bd);border-radius:var(--r);
+        display:grid;place-items:center;background:var(--head);
+        background-image:repeating-linear-gradient(0deg,var(--t1) 0 6px,transparent 6px 12px),repeating-linear-gradient(90deg,var(--t1) 0 6px,transparent 6px 12px);
+        background-size:24px 24px;opacity:.85"></div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:3px">A03 · 大厅靠窗</div>
+      <div class="hint" style="margin-bottom:12px">微信 / 支付宝 扫码点餐</div>
+      <div class="bill" style="text-align:left;font-size:11px;word-break:break-all">
+        https://order.jufulou.cn/t?<br>tid=A03&v=2&sig=8f3a91c7e2</div>
+      <div class="hint" style="margin-top:10px;text-align:left">
+        <b>sig</b> 为服务端签名，篡改 tid 会校验失败；<b>v</b> 为版本号，吊销换版后旧码立即失效。</div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 营业报表 ========== -->
+<section class="pg" id="p-report">
+  <div class="pt"><h1>营业报表</h1><p>2026-08-01 至 2026-08-23</p>
+    <div class="pt-r"><div class="seg"><div>日</div><div class="on">周</div><div>月</div></div>
+      <button class="btn" onclick="tst('g','已导出')">⇩ 导出 Excel</button></div></div>
+
+  <div class="stats s5">
+    <div class="st hl"><div class="st-l">区间营业额</div><div class="st-v">186,420<small>.50</small></div>
+      <div class="st-f"><span class="up">↑ 8.2%</span> 环比上月同期</div></div>
+    <div class="st"><div class="st-l">订单总数</div><div class="st-v">2,068</div><div class="st-f">日均 90 单</div></div>
+    <div class="st"><div class="st-l">客单价</div><div class="st-v">90<small>.15</small></div><div class="st-f"><span class="up">↑ 1.8%</span></div></div>
+    <div class="st"><div class="st-l">翻台率</div><div class="st-v">3.2<small> 次/桌</small></div><div class="st-f">午市 1.4 · 晚市 1.8</div></div>
+    <div class="st warn"><div class="st-l">跑单/免单率</div><div class="st-v" style="color:var(--wn)">0.34<small>%</small></div>
+      <div class="st-f">7 笔 · ¥1,842 核销</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><h3>每日营业额趋势</h3>
+      <div class="ch-r"><span class="tag b">工作日均 7,842</span><span class="tag g">周末均 11,206</span></div></div>
+    <div class="cb"><div class="bars" style="height:180px">
+      <div><b>7.2k</b><i style="height:52%"></i><span>17</span></div>
+      <div><b>11.4k</b><i class="a" style="height:82%"></i><span>18</span></div>
+      <div><b>12.1k</b><i class="a" style="height:88%"></i><span>19</span></div>
+      <div><b>7.9k</b><i style="height:57%"></i><span>20</span></div>
+      <div><b>8.3k</b><i style="height:60%"></i><span>21</span></div>
+      <div><b>13.7k</b><i class="a" style="height:100%"></i><span>22</span></div>
+      <div><b>8.6k</b><i class="a" style="height:63%"></i><span>23</span></div>
+    </div>
+    <div class="hint" style="margin-top:12px">周末（绿色）明显高于工作日，建议周末增配后厨与服务员。</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="ch"><h3>结账模式分布</h3></div><div class="cb">
+      <div style="display:flex;gap:20px;align-items:center">
+        <div class="donut" style="background:conic-gradient(#1677FF 0 62%,#722ED1 62% 100%)">
+          <div class="donut-c"><b>2,068</b><small>单</small></div></div>
+        <div class="lgd">
+          <div><i style="background:#1677FF"></i><span>先付（散台）</span><b>1,282</b></div>
+          <div><i style="background:#722ED1"></i><span>后付（包间/正餐）</span><b>786</b></div>
+          <div style="margin-top:6px;padding-top:10px;border-top:1px dashed var(--split)">
+            <span style="color:var(--t3);font-size:12px">后付客单价 ¥168.20，是先付的 2.3 倍</span></div>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="ch"><h3>出餐效率</h3><div class="ch-r"><span class="tag g">达标</span></div></div><div class="cb">
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span>平均出餐时长</span><b class="num">9 分 12 秒</b></div><div class="prog"><i style="width:61%;background:var(--ok)"></i></div>
+          <div class="hint" style="margin-top:4px">目标 ≤ 15 分钟</div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span>高峰期出餐（18:00–19:00）</span><b class="num">14 分 38 秒</b></div><div class="prog"><i style="width:88%;background:var(--wn)"></i></div>
+          <div class="hint" style="margin-top:4px">接近阈值，热菜档为瓶颈</div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span>超时单（>20 分钟）</span><b class="num">23 单 · 1.1%</b></div><div class="prog"><i style="width:11%;background:var(--er)"></i></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span>退菜率</span><b class="num">0.8%</b></div><div class="prog"><i style="width:8%"></i></div></div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 多来源对账 ========== -->
+<section class="pg" id="p-recon">
+  <div class="pt"><h1>多来源对账</h1><p>2026-08-23 日结 · 微信 / 支付宝 / 现金 / POS / 挂账 / 外卖核券</p>
+    <div class="pt-r"><input class="inp" value="2026-08-23" style="width:130px">
+      <button class="btn" onclick="tst('b','已重新计算')">↻ 重算</button>
+      <button class="btn pri" onclick="openM('mClose')">✓ 执行日结</button></div></div>
+
+  <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+    <div><b>发现 1 处差异需核对：现金账实差 ¥30.00</b>
+    系统记录现金收入 ¥1,210.00，收银员实盘 ¥1,180.00。请核对是否有找零错误或未补录的现金单。差异未平不建议执行日结。</div>
+    <div class="ar"><button class="btn sm dan-o" onclick="openM('mDiff')">处理差异</button></div></div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><h3>口径明细</h3><p>营业额按<b>结账时间</b>归属，非下单时间</p></div>
+    <div class="cb p0"><table><thead><tr>
+      <th>口径</th><th>笔数</th><th>系统金额</th><th>渠道流水/实盘</th><th>差异</th><th>是否计入营业额</th><th>状态</th>
+    </tr></thead><tbody>
+      <tr><td><span class="tag g">微信支付</span></td><td class="num">47</td><td><b class="num">¥3,975.60</b></td>
+        <td class="num">¥3,975.60</td><td class="num" style="color:var(--ok)">0.00</td>
+        <td><span class="tag g">计入</span></td><td><span class="tag g">✓ 已平</span></td></tr>
+      <tr><td><span class="tag b">支付宝</span></td><td class="num">34</td><td><b class="num">¥2,852.05</b></td>
+        <td class="num">¥2,852.05</td><td class="num" style="color:var(--ok)">0.00</td>
+        <td><span class="tag g">计入</span></td><td><span class="tag g">✓ 已平</span></td></tr>
+      <tr class="tr-warn"><td><span class="tag o">现金</span></td><td class="num">9</td><td><b class="num">¥1,210.00</b></td>
+        <td class="num">¥1,180.00</td><td class="num" style="color:var(--er)">−30.00</td>
+        <td><span class="tag g">计入</span></td><td><span class="tag r">✕ 待核对</span></td></tr>
+      <tr><td><span class="tag p">POS 刷卡</span></td><td class="num">3</td><td><b class="num">¥604.85</b></td>
+        <td class="num">¥604.85</td><td class="num" style="color:var(--ok)">0.00</td>
+        <td><span class="tag g">计入</span></td><td><span class="tag g">✓ 已平</span></td></tr>
+      <tr><td><span class="tag" style="background:rgba(22,119,255,.1);color:var(--info)">外卖核券</span></td><td class="num">0</td><td><b class="num">¥0.00</b></td>
+        <td class="hint">美团/饿了么/抖音（Phase 2）</td><td class="num">—</td>
+        <td><span class="tag g">计入</span></td><td><span class="tag d">未启用</span></td></tr>
+      <tr style="background:var(--wn-bg)"><td><span class="tag o">未结账挂账</span></td><td class="num">3</td><td><b class="num">¥1,286.00</b></td>
+        <td class="hint">钱未入账</td><td class="num">—</td>
+        <td><span class="tag r">不计入</span></td><td><span class="tag o">⏱ 进行中</span></td></tr>
+      <tr style="background:var(--er-bg)"><td><span class="tag r">核销（跑单/免单/招待）</span></td><td class="num">1</td>
+        <td><b class="num" style="color:var(--er)">¥268.00</b></td><td class="hint">计入损耗</td><td class="num">—</td>
+        <td><span class="tag r">不计入</span></td><td><span class="tag d">已记录</span></td></tr>
+    </tbody><tfoot><tr style="background:var(--head);font-weight:600">
+      <td><b>当日已收营业额</b></td><td class="num"><b>93</b></td>
+      <td><b class="num" style="font-size:16px;color:var(--brand)">¥8,642.50</b></td>
+      <td class="num">¥8,612.50</td><td class="num" style="color:var(--er)"><b>−30.00</b></td>
+      <td colspan="2" class="hint">= 微信 + 支付宝 + 现金 + POS，不含挂账与核销</td>
+    </tr></tfoot></table></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="ch"><h3>未结账挂账明细</h3><div class="ch-r"><span class="tag o">3 桌 · ¥1,286.00</span></div></div>
+      <div class="cb p0"><table><thead><tr><th>桌号</th><th>开台时间</th><th>已点金额</th><th>操作</th></tr></thead><tbody>
+        <tr><td><b>B02</b> <span class="hint">牡丹厅</span></td><td class="mono">17:42</td><td><b class="num">¥1,286.00</b></td>
+          <td><button class="btn sm pri" onclick="go('tables')">去结账</button></td></tr>
+        <tr><td><b>B03</b> <span class="hint">兰花厅</span></td><td class="mono">18:15</td><td class="hint">已结清</td>
+          <td><span class="hint">—</span></td></tr>
+        <tr><td><b>A06</b></td><td class="mono">19:02</td><td class="hint">已结清</td><td><span class="hint">—</span></td></tr>
+      </tbody></table></div>
+      <div class="cb"><div class="alert o" style="font-size:12px"><u>⚠</u>
+        <div>挂账<b>不计入营业额</b>。若算进去，账面会永远比实收多，第一天就会以为系统丢钱。</div></div></div>
+    </div>
+
+    <div class="card"><div class="ch"><h3>日结前检查</h3></div><div class="cb">
+      <div style="display:flex;flex-direction:column;gap:11px;font-size:14px">
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--ok)">✓</span>微信/支付宝渠道流水已拉取比对</div>
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--er)">✕</span>现金实盘差异 ¥30.00 <b style="color:var(--er)">待处理</b></div>
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--ok)">✓</span>POS 小票张数核对一致</div>
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--wn)">⏱</span>B02 仍未结账，¥1,286.00 挂账</div>
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--ok)">✓</span>需人工处理单已清零</div>
+        <div style="display:flex;gap:9px;align-items:center"><span style="color:var(--ok)">✓</span>打印失败任务已补打</div>
+      </div>
+      <div class="alert b" style="margin-top:16px;font-size:12px"><u>ⓘ</u>
+        <div>日结后当日数据锁定，仅店长可申请解锁修正，所有修正进操作日志。</div></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 退款与核销 ========== -->
+<section class="pg" id="p-refund">
+  <div class="pt"><h1>退款与核销</h1><p>退款按原渠道原路返回 · 核销计入损耗并按操作人统计</p></div>
+
+  <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+    <div><b>严禁跨渠道退款</b>
+    微信收的钱必须走微信退回，支付宝收的走支付宝。跨渠道退不仅资金对不上，也属于违规操作。系统已在接口层强制校验。</div></div>
+
+  <div class="stats s4">
+    <div class="st"><div class="st-l">今日退款</div><div class="st-v">4<small> 笔</small></div><div class="st-f">¥286.00</div></div>
+    <div class="st"><div class="st-l">退菜（未出餐）</div><div class="st-v">3<small> 笔</small></div><div class="st-f">部分退款</div></div>
+    <div class="st err"><div class="st-l">核销损耗</div><div class="st-v" style="color:var(--er)">268<small>.00</small></div><div class="st-f">1 笔 · 跑单</div></div>
+    <div class="st"><div class="st-l">退款成功率</div><div class="st-v">100<small>%</small></div><div class="st-f">平均到账 4.2 小时</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><div class="tabs"><div class="on">退款记录</div><div>核销记录</div></div>
+    <div class="cb p0"><table><thead><tr>
+      <th>退款单号</th><th>原订单</th><th>桌号</th><th>类型</th><th>退款金额</th><th>原渠道</th><th>操作人</th><th>状态</th><th>时间</th>
+    </tr></thead><tbody>
+      <tr><td class="mono">RF-0043</td><td class="mono">JF20260823-0079</td><td><b>B03</b></td>
+        <td><span class="tag r">重复扣款退回</span></td><td><b class="num">¥328.00</b></td><td><span class="tag g">微信</span></td>
+        <td>张店长 1001</td><td><span class="tag g">已退款</span></td><td class="mono">18:45</td></tr>
+      <tr><td class="mono">RF-0042</td><td class="mono">JF20260823-0071</td><td><b>A04</b></td>
+        <td><span class="tag o">退菜（未出餐）</span></td><td><b class="num">¥48.00</b></td><td><span class="tag b">支付宝</span></td>
+        <td>李收银 1003</td><td><span class="tag g">已退款</span></td><td class="mono">18:22</td></tr>
+      <tr><td class="mono">RF-0041</td><td class="mono">JF20260823-0058</td><td><b>C02</b></td>
+        <td><span class="tag o">退菜（沽清）</span></td><td><b class="num">¥38.00</b></td><td><span class="tag g">微信</span></td>
+        <td>李收银 1003</td><td><span class="tag g">已退款</span></td><td class="mono">17:58</td></tr>
+      <tr><td class="mono">RF-0040</td><td class="mono">JF20260823-0035</td><td><b>A01</b></td>
+        <td><span class="tag d">现金退</span></td><td><b class="num">¥26.00</b></td><td><span class="tag o">现金</span></td>
+        <td>李收银 1003</td><td><span class="tag d">线下已退</span></td><td class="mono">12:41</td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div class="card"><div class="ch"><h3>核销记录（跑单 / 免单 / 招待）</h3>
+    <div class="ch-r"><span class="tag r">本月 7 笔 · ¥1,842</span></div></div>
+    <div class="cb p0"><table><thead><tr>
+      <th>桌号</th><th>金额</th><th>原因</th><th>说明</th><th>操作人</th><th>时间</th>
+    </tr></thead><tbody>
+      <tr class="tr-warn"><td><b>A08</b></td><td><b class="num" style="color:var(--er)">¥268.00</b></td>
+        <td><span class="tag r">跑单</span></td><td class="hint">顾客未结账离店，监控已调取</td><td>张店长 1001</td><td class="mono">18:52</td></tr>
+      <tr><td><b>B01</b></td><td><b class="num">¥520.00</b></td>
+        <td><span class="tag p">招待</span></td><td class="hint">供应商招待，老板批准</td><td>张店长 1001</td><td class="mono">08-22 19:30</td></tr>
+      <tr><td><b>A02</b></td><td><b class="num">¥96.00</b></td>
+        <td><span class="tag o">免单</span></td><td class="hint">出餐超 40 分钟，客诉补偿</td><td>张店长 1001</td><td class="mono">08-21 12:47</td></tr>
+    </tbody></table></div>
+    <div class="cb"><div class="alert o" style="font-size:12px"><u>⚠</u>
+      <div>核销需选原因、记工号、进操作日志。<b>跑单率与免单率既是运营指标，也是内部风控指标</b>，按操作人统计可发现异常。</div></div></div>
+  </div>
+</section>
+
+<!-- ========== 员工与权限 ========== -->
+<section class="pg" id="p-staff">
+  <div class="pt"><h1>员工与权限</h1><p>6 名员工 · operator_id 会写入订单，用于追责与对账</p>
+    <div class="pt-r"><button class="btn pri" onclick="openStaff('add')">+ 新增员工</button></div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+    <div class="card"><div class="cb p0"><table><thead><tr>
+      <th>工号</th><th>姓名</th><th>角色</th><th>可用功能</th><th>最近登录</th><th>状态</th><th style="width:150px">操作</th>
+    </tr></thead><tbody>
+      <tr><td class="mono">1001</td><td><b>张店长</b></td><td><span class="tag b">店长</span></td>
+        <td class="hint">全部功能 · 含核销/退款/日结</td><td class="mono">今天 17:02</td><td><span class="tag g">在职</span></td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openStaff('edit','1001','张店长','店长','138****1001')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已重置为初始密码')">重置密码</button></div></td></tr>
+      <tr><td class="mono">1003</td><td><b>李收银</b></td><td><span class="tag c">收银员</span></td>
+        <td class="hint">收银台 · 结账 · 退菜 · 补录</td><td class="mono">今天 16:55</td><td><span class="tag g">在职</span></td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openStaff('edit','1003','李收银','收银员','138****1003')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已重置为初始密码')">重置密码</button></div></td></tr>
+      <tr><td class="mono">2001</td><td><b>王师傅</b></td><td><span class="tag o">后厨</span></td>
+        <td class="hint">仅 KDS 大屏 · 出餐操作</td><td class="mono">今天 16:40</td><td><span class="tag g">在职</span></td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openStaff('edit','2001','王师傅','后厨','138****2001')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已重置为初始密码')">重置密码</button></div></td></tr>
+      <tr><td class="mono">3005</td><td><b>刘服务员</b></td><td><span class="tag d">服务员</span></td>
+        <td class="hint">桌台图 · 代客点单 · 清台</td><td class="mono">今天 17:10</td><td><span class="tag g">在职</span></td>
+        <td><div class="ops"><button class="btn sm txt" onclick="openStaff('edit','3005','刘服务员','服务员','138****3005')">编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已重置为初始密码')">重置密码</button></div></td></tr>
+      <tr><td class="mono">3002</td><td><b>陈服务员</b></td><td><span class="tag d">服务员</span></td>
+        <td class="hint">桌台图 · 代客点单 · 清台</td><td class="mono">08-19 20:31</td><td><span class="tag d">已离职</span></td>
+        <td><div class="ops"><button class="btn sm txt" disabled>编辑</button>
+        <button class="btn sm txt" onclick="tst('b','已恢复账号')">恢复</button></div></td></tr>
+    </tbody></table></div></div>
+
+    <div class="card"><div class="ch"><h3>权限矩阵</h3></div><div class="cb">
+      <table style="font-size:13px"><thead><tr><th>功能</th><th style="text-align:center">店长</th>
+        <th style="text-align:center">收银</th><th style="text-align:center">服务员</th><th style="text-align:center">后厨</th></tr></thead><tbody>
+        <tr><td>KDS 出餐</td><td align="center">✓</td><td align="center">✓</td><td align="center">—</td><td align="center">✓</td></tr>
+        <tr><td>代客点单</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">—</td></tr>
+        <tr><td>结账收款</td><td align="center">✓</td><td align="center">✓</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td>退菜退款</td><td align="center">✓</td><td align="center">✓</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td><b style="color:var(--er)">核销跑单</b></td><td align="center">✓</td><td align="center">—</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td><b style="color:var(--er)">降级开关</b></td><td align="center">✓</td><td align="center">—</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td>改价/沽清</td><td align="center">✓</td><td align="center">—</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td>日结/报表</td><td align="center">✓</td><td align="center">查看</td><td align="center">—</td><td align="center">—</td></tr>
+        <tr><td>员工管理</td><td align="center">✓</td><td align="center">—</td><td align="center">—</td><td align="center">—</td></tr>
+      </tbody></table>
+      <div class="alert o" style="margin-top:14px;font-size:12px"><u>⚠</u>
+        <div>核销与降级<b>仅店长可操作</b>，这是内部风控底线，不要为图方便下放给收银。</div></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 操作日志 ========== -->
+<section class="pg" id="p-log">
+  <div class="pt"><h1>操作日志</h1><p>敏感操作全量留痕 · 保留 180 天 · 不可删除</p>
+    <div class="pt-r"><button class="btn" onclick="tst('g','已导出')">⇩ 导出</button></div></div>
+
+  <div class="card">
+    <div class="cb" style="padding:16px 20px;border-bottom:1px solid var(--split)"><div class="fbar">
+      <div class="fi"><label>操作人</label><select class="sel"><option>全部</option><option>张店长</option><option>李收银</option><option>刘服务员</option></select></div>
+      <div class="fi"><label>类型</label><select class="sel"><option>全部</option><option>核销</option><option>退款</option><option>改价</option><option>降级</option><option>日结</option><option>权限变更</option></select></div>
+      <div class="fi"><label>时间</label><input class="inp" value="2026-08-23" style="width:130px"></div>
+      <button class="btn pri" onclick="tst('b','已筛选')">查询</button>
+    </div></div>
+    <div class="cb p0"><table><thead><tr>
+      <th>时间</th><th>操作人</th><th>类型</th><th>对象</th><th>内容</th><th>IP</th>
+    </tr></thead><tbody>
+      <tr class="tr-warn"><td class="mono">18:52:14</td><td><b>张店长</b> 1001</td><td><span class="tag r">核销</span></td>
+        <td class="mono">A08 / SESS-0231</td><td>跑单核销 ¥268.00，原因「顾客未结账离店」</td><td class="mono">192.168.1.24</td></tr>
+      <tr><td class="mono">18:45:03</td><td><b>张店长</b> 1001</td><td><span class="tag o">退款</span></td>
+        <td class="mono">JF20260823-0079</td><td>重复扣款退回 ¥328.00（微信原路）</td><td class="mono">192.168.1.24</td></tr>
+      <tr><td class="mono">18:40:22</td><td><b>张店长</b> 1001</td><td><span class="tag b">沽清</span></td>
+        <td class="mono">口水鸡</td><td>设为已沽清，双端菜单同步成功</td><td class="mono">192.168.1.24</td></tr>
+      <tr><td class="mono">18:22:41</td><td><b>李收银</b> 1003</td><td><span class="tag o">退菜</span></td>
+        <td class="mono">JF20260823-0071</td><td>退宫保鸡丁 ×1 ¥48.00（未出餐，支付宝原路）</td><td class="mono">192.168.1.31</td></tr>
+      <tr><td class="mono">17:35:09</td><td><b>张店长</b> 1001</td><td><span class="tag p">改价</span></td>
+        <td class="mono">水煮牛肉</td><td>¥65.00 → ¥68.00</td><td class="mono">192.168.1.24</td></tr>
+      <tr><td class="mono">12:18:30</td><td><b>张店长</b> 1001</td><td><span class="tag r">降级</span></td>
+        <td class="mono">全局</td><td>开启降级模式（打印机批量离线），13:02 关闭</td><td class="mono">192.168.1.24</td></tr>
+      <tr><td class="mono">10:12:55</td><td><b>张店长</b> 1001</td><td><span class="tag c">二维码</span></td>
+        <td class="mono">包间 B01–B06</td><td>吊销 v1 生成 v2，原因「桌贴磨损」</td><td class="mono">192.168.1.24</td></tr>
+    </tbody></table></div>
+  </div>
+</section>
+
+<!-- ========== 系统设置 ========== -->
+<section class="pg" id="p-setting">
+  <div class="pt"><h1>系统设置</h1><p>支付、打印、营业参数 · 敏感凭据只显示状态不显示明文</p></div>
+
+  <div class="card" style="margin-bottom:16px"><div class="tabs" id="setTabs">
+    <div class="on" data-tab="biz">营业参数</div><div data-tab="pay">支付配置</div><div data-tab="print">打印配置</div><div data-tab="notify">通知</div></div>
+    <div class="cb" id="tab-biz">
+      <h4 style="font-size:14px;margin-bottom:14px">营业时段（同时作为报表日切与禁止变更窗口依据）</h4>
+      <div class="f2">
+        <div class="fg"><label>午市</label><div class="lg-row">
+          <input class="inp" value="11:00"><span style="line-height:32px;color:var(--t3)">至</span><input class="inp" value="14:00"></div></div>
+        <div class="fg"><label>晚市</label><div class="lg-row">
+          <input class="inp" value="17:00"><span style="line-height:32px;color:var(--t3)">至</span><input class="inp" value="21:30"></div></div>
+      </div>
+      <div class="f3">
+        <div class="fg"><label>报表日切时间</label><input class="inp" value="23:59">
+          <small>跨零点营业（宵夜档）需调整，否则收尾单会算到第二天</small></div>
+        <div class="fg"><label>未支付订单自动关单</label><select class="sel"><option>15 分钟</option><option>10 分钟</option><option>20 分钟</option></select>
+          <small>仅对先付单生效，后付「未结账」单永不超时</small></div>
+        <div class="fg"><label>餐位费</label><input class="inp" value="2.00 元/位"></div>
+      </div>
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>周末延长晚市至 22:00</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>清台前强制校验未结账金额（防跑单，强烈建议开启）</span></label></div>
+      <div style="padding-top:6px"><button class="btn pri" onclick="tst('g','已保存')">保存设置</button></div>
+    </div>
+  </div>
+
+  <div class="card" id="tab-pay" style="display:none;margin-bottom:16px"><div class="ch"><h3>支付渠道</h3><div class="ch-r"><span class="tag g">双渠道已启用</span></div></div><div class="cb">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="prt ok"><u style="color:#07C160">✓</u><div class="prt-i"><b>微信支付 v3</b>
+          <small>商户号 16****8823 · APIv3 密钥已配置 · 证书有效期至 2027-06</small></div>
+          <div class="sw on" onclick="tglSw(this)"></div></div>
+        <div class="prt ok"><u>✓</u><div class="prt-i"><b>支付宝</b>
+          <small>AppID 2021****4471 · 应用私钥已配置 · 回调返回纯文本 success</small></div>
+          <div class="sw on" onclick="tglSw(this)"></div></div>
+        <div class="prt ok"><u style="color:var(--wn)">◐</u><div class="prt-i"><b>模拟支付 MOCK_PAYMENT</b>
+          <small>开发调试用，上线必须关闭</small></div>
+          <div class="sw" onclick="tglSw(this)"></div></div>
+      </div>
+      <div class="alert r" style="margin-top:14px;font-size:12px"><u>⚠</u>
+        <div>密钥与证书<b>不在此页显示明文</b>，仅显示配置状态。修改需在服务器环境变量操作，且禁止在营业高峰进行。</div></div>
+    </div></div>
+
+  <div class="card" id="tab-print" style="display:none;margin-bottom:16px"><div class="ch"><h3>打印配置</h3><div class="ch-r"><span class="tag o">1 台离线</span></div></div><div class="cb">
+      <table style="font-size:13px"><thead><tr><th>档口</th><th>打印机</th><th>联动分类</th><th>状态</th></tr></thead><tbody>
+        <tr><td><b>热菜档</b></td><td class="mono">FE-8021 / 918****231</td><td class="hint">热菜、汤羹</td><td><span class="tag r">离线</span></td></tr>
+        <tr><td><b>凉菜档</b></td><td class="mono">FE-8021 / 918****232</td><td class="hint">凉菜</td><td><span class="tag g">在线</span></td></tr>
+        <tr><td><b>吧台</b></td><td class="mono">XP-N160II / 772****045</td><td class="hint">饮品、酒水、结账小票</td><td><span class="tag g">在线</span></td></tr>
+      </tbody></table>
+      <div class="fg" style="margin-top:16px"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>打印失败自动重试 3 次</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>打印机离线时推送告警到店长手机</span></label></div>
+      <div class="fg" style="margin-bottom:0"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>主打印机离线时自动转投备用打印机</span></label></div>
+    </div></div>
+
+  <div class="card" id="tab-notify" style="display:none;margin-bottom:16px"><div class="ch"><h3>通知设置</h3></div><div class="cb">
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>新订单实时推送到店长 / 收银企业微信</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>后厨出餐超时（>15 分钟）提醒</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+        <span>打印机离线 / 恢复通知</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw" onclick="tglSw(this)"></div>
+        <span>每日营业报表汇总推送（每日 23:59 后）</span></label></div>
+      <div class="fg"><label>接收手机号</label><input class="inp" value="138****6621" placeholder="用于短信兜底通知"></div>
+      <div style="padding-top:6px"><button class="btn pri" onclick="tst('g','通知设置已保存')">保存设置</button></div>
+    </div></div>
+
+  <div class="alert" style="margin-top:16px;font-size:12px"><u>ℹ</u>
+    <div><b>按人收费项</b>（餐位费 / 餐具 / 餐巾纸 / 湿巾）已移至左侧菜单 <b>「菜单与桌台 → 按人收费项」</b>，与分类菜品同属定价体系，便于统一管理。</div></div>
+</section>
+
+<!-- ========== 按人收费项 ========== -->
+<section class="pg" id="p-perhead">
+  <div class="pt"><h1>按人收费项</h1><p>餐具 / 餐巾纸 / 湿巾 / 餐位费 · 金额 = 单价 × 就餐人数，计入账单与对账</p>
+    <div class="pt-r"><button class="btn pri" data-per="add">+ 新增收费项</button></div></div>
+
+  <div class="card"><div class="ch"><h3>按人收费项（按就餐人数计费）</h3>
+    <div class="ch-r"><span class="tag" style="background:rgba(22,119,255,.1);color:var(--info)">单价 × 人数</span></div></div>
+    <div class="cb p0"><table><thead><tr><th>收费项</th><th>单价</th><th>默认勾选</th><th>必选</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <tr><td>💺 餐位费</td><td class="mono">¥2.00 / 位</td><td><span class="tag g">默认</span></td><td><span class="tag r">必选</span></td><td><span class="tag g">启用</span></td><td><button class="btn sm txt" data-per="edit" data-name="餐位费" data-price="2.00" data-def="1" data-req="1" data-on="1">编辑</button></td></tr>
+      <tr><td>🥢 餐具费</td><td class="mono">¥2.00 / 位</td><td><span class="tag g">默认</span></td><td><span class="tag">可选</span></td><td><span class="tag g">启用</span></td><td><button class="btn sm txt" data-per="edit" data-name="餐具费" data-price="2.00" data-def="1" data-req="0" data-on="1">编辑</button></td></tr>
+      <tr><td>🧻 餐巾纸</td><td class="mono">¥1.00 / 位</td><td><span class="tag g">默认</span></td><td><span class="tag">可选</span></td><td><span class="tag g">启用</span></td><td><button class="btn sm txt" data-per="edit" data-name="餐巾纸" data-price="1.00" data-def="1" data-req="0" data-on="1">编辑</button></td></tr>
+      <tr><td>💧 湿巾</td><td class="mono">¥1.50 / 位</td><td><span class="tag">不默认</span></td><td><span class="tag">可选</span></td><td><span class="tag g">启用</span></td><td><button class="btn sm txt" data-per="edit" data-name="湿巾" data-price="1.50" data-def="0" data-req="0" data-on="1">编辑</button></td></tr>
+    </tbody></table></div>
+    <div class="alert" style="margin:14px 0 0;font-size:12px"><u>ℹ</u>
+      <div>按人收费项在顾客端<b>扫码选人数后</b>展示，金额 = 单价 × 就餐人数，可单独计入账单与对账；必选项（如餐位费）顾客不可取消。</div></div>
+  </div>
+</section>
+
+<!-- ========== 备份与恢复 ========== -->
+<section class="pg" id="p-backup">
+  <div class="pt"><h1>备份与恢复</h1><p>每日全量 + WAL 归档 PITR · 备份异地留存 30 天 · 业务数据永久保留</p>
+    <div class="pt-r"><button class="btn" onclick="tst('b','已触发手动全量备份，预计 2 分钟')">⛁ 立即备份</button></div></div>
+
+  <div class="stats s4">
+    <div class="st hl"><div class="st-l">RPO 数据丢失窗口</div><div class="st-v">≤5<small> 分钟</small></div>
+      <div class="st-f">WAL 每 5 分钟强制切换</div></div>
+    <div class="st"><div class="st-l">RTO 恢复耗时</div><div class="st-v">≤30<small> 分钟</small></div>
+      <div class="st-f">上次演练 22 分钟</div></div>
+    <div class="st"><div class="st-l">最近全量备份</div><div class="st-v" style="font-size:20px">今日 03:00</div>
+      <div class="st-f"><span class="up">✓ 成功</span> · 42.6 MB</div></div>
+    <div class="st"><div class="st-l">可恢复时点范围</div><div class="st-v" style="font-size:20px">7 天内任意秒</div>
+      <div class="st-f">8–30 天仅到当日凌晨</div></div>
+  </div>
+
+  <div class="alert g" style="margin-bottom:16px"><u>✓</u>
+    <div><b>备份验证机制正常</b>
+    上次自动恢复验证 2026-08-22 04:12 通过（临时库行数比对一致）。<b>未验证的备份等于没备份</b>——磁盘满、权限变更、密码过期都会让 cron 静默失败数月无人察觉。</div></div>
+
+  <div class="card" style="margin-bottom:16px"><div class="ch"><h3>三层备份策略</h3></div>
+    <div class="cb p0"><table><thead><tr>
+      <th>层级</th><th>手段</th><th>频率</th><th>保留</th><th>存储位置</th><th>可挡什么</th><th>状态</th>
+    </tr></thead><tbody>
+      <tr><td><b>① 逻辑全量</b></td><td class="mono">pg_dump</td><td>每日 03:00</td><td>30 天</td>
+        <td>对象存储（异地）</td><td class="hint">表损坏、误删、换机迁移</td><td><span class="tag g">正常</span></td></tr>
+      <tr><td><b>② WAL 归档</b></td><td class="mono">archive_command</td><td>持续 · 5min 切换</td><td>7 天</td>
+        <td>对象存储（异地）</td><td class="hint">RPO 压到 5 分钟，精确回滚误操作</td><td><span class="tag g">正常</span></td></tr>
+      <tr><td><b>③ 云主机快照</b></td><td class="mono">云平台自动</td><td>每日</td><td>30 天</td>
+        <td>云平台</td><td class="hint">整机故障，恢复最快</td><td><span class="tag g">正常</span></td></tr>
+      <tr><td><b>④ 凭据备份</b></td><td class="mono">.env / 证书</td><td>变更时</td><td>长期</td>
+        <td><b>独立保管，不与数据库备份同处</b></td><td class="hint">密钥丢失比数据丢失更耽误事</td><td><span class="tag g">已备</span></td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="ch"><h3>备份历史</h3></div>
+      <div class="cb p0"><table><thead><tr><th>时间</th><th>类型</th><th>大小</th><th>校验</th><th>操作</th></tr></thead><tbody>
+        <tr><td class="mono">08-23 03:00</td><td>全量</td><td class="num">42.6 MB</td><td><span class="tag g">✓ 通过</span></td>
+          <td><button class="btn sm dan-o" onclick="openM('mRestore')">恢复</button></td></tr>
+        <tr><td class="mono">08-22 03:00</td><td>全量</td><td class="num">41.9 MB</td><td><span class="tag g">✓ 已验证恢复</span></td>
+          <td><button class="btn sm dan-o" onclick="openM('mRestore')">恢复</button></td></tr>
+        <tr><td class="mono">08-21 03:00</td><td>全量</td><td class="num">41.2 MB</td><td><span class="tag g">✓ 通过</span></td>
+          <td><button class="btn sm dan-o" onclick="openM('mRestore')">恢复</button></td></tr>
+        <tr><td class="mono">08-20 03:00</td><td>全量</td><td class="num">40.8 MB</td><td><span class="tag g">✓ 通过</span></td>
+          <td><button class="btn sm dan-o" onclick="openM('mRestore')">恢复</button></td></tr>
+      </tbody></table></div>
+    </div>
+
+    <div class="card"><div class="ch"><h3>禁止变更窗口</h3><div class="ch-r"><span class="tag r">当前晚市 · 禁止</span></div></div><div class="cb">
+      <table style="font-size:13px"><thead><tr><th>时段</th><th>状态</th><th>允许操作</th></tr></thead><tbody>
+        <tr style="background:var(--er-bg)"><td class="mono"><b>11:00–14:00</b></td><td><span class="tag r">午市禁变更</span></td>
+          <td class="hint">仅只读排查、看日志监控</td></tr>
+        <tr><td class="mono">14:00–17:00</td><td><span class="tag o">平峰谨慎</span></td>
+          <td class="hint">可发小版本，须先备份、能秒回滚</td></tr>
+        <tr style="background:var(--er-bg)"><td class="mono"><b>17:00–21:30</b></td><td><span class="tag r">晚市禁变更</span></td>
+          <td class="hint">仅只读排查、看日志监控</td></tr>
+        <tr style="background:var(--ok-bg)"><td class="mono"><b>21:30–次日 11:00</b></td><td><span class="tag g">安全窗口</span></td>
+          <td class="hint">恢复、迁移、发版、DDL、演练</td></tr>
+      </tbody></table>
+      <div class="alert r" style="margin-top:14px;font-size:12px"><u>⚠</u>
+        <div><b>高峰出故障的正确顺序</b>：切人工降级 → 记录现场 → <b>打烊后再修</b>。
+        店长的本能反应是「赶紧重启试试」，而这通常会让情况更糟。</div></div>
+    </div></div>
+  </div>
+</section>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== KDS 后厨大屏 ==================== -->
+<div id="kds">
+  <div class="k-hd">
+    <h2>后厨出餐大屏</h2>
+    <div class="k-chip g"><i></i>WebSocket 已连接</div>
+    <div class="k-chip r"><i></i>热菜档打印机离线</div>
+    <div class="k-chip">今日已出餐 <b style="color:#fff;margin-left:4px">84</b></div>
+    <div class="k-hd-r">
+      <div class="k-chip">平均出餐 <b style="color:#6ABE39;margin-left:4px">9:12</b></div>
+      <div class="kt" id="kdsClock">19:06:47</div>
+      <button class="k-btn" onclick="tst('b','已切换为按档口分列（原型示意）')">⊞ 视图</button>
+      <button class="k-btn" onclick="tst('o','声音提醒已静音 10 分钟')">🔔 静音</button>
+      <button class="k-btn pri" onclick="closeKds()">✕ 退出大屏</button>
+    </div>
+  </div>
+
+  <div class="k-cols">
+    <div class="k-col">
+      <div class="k-ct new"><u>◉</u>新单待接<b id="kc1">3</b></div>
+      <div class="k-list" id="kl1"></div>
+    </div>
+    <div class="k-col">
+      <div class="k-ct mk"><u>◐</u>备餐中<b id="kc2">2</b></div>
+      <div class="k-list" id="kl2"></div>
+    </div>
+    <div class="k-col">
+      <div class="k-ct dn"><u>✓</u>已出餐<b id="kc3">2</b></div>
+      <div class="k-list" id="kl3"></div>
+    </div>
+    <div class="k-col">
+      <div class="k-ct wt"><u>⏱</u>后付未结账<b id="kc4">1</b></div>
+      <div class="k-list" id="kl4"></div>
+    </div>
+  </div>
+
+  <div class="k-ft">
+    <span>档口筛选：<b>全部</b></span>
+    <span>超时阈值：<b>15 分钟</b></span>
+    <span>轮询兜底：<b>3 秒</b></span>
+    <div class="kf-r">
+      <span>油烟环境建议保持暗色主题 · 大字号 · 大按钮防误触</span>
+      <span>屏单与纸单并存，任一失效都能出餐</span>
+    </div>
+  </div>
+</div>
+
+<!--MODAL_ANCHOR-->
+
+<!-- 桌台详情抽屉 -->
+<div class="dmask" id="dmTable"></div>
+<aside class="drw" id="dwTable">
+  <div class="ch" style="border:none;border-bottom:1px solid var(--split)">
+    <h3 id="dwTitle">A03 · 大厅靠窗</h3>
+    <div class="x" onclick="closeDrw('dwTable')">✕</div>
+  </div>
+  <div class="cb" id="dwBody"></div>
+  <div class="mf" id="dwFoot"></div>
+</aside>
+
+<!-- 降级确认弹窗 -->
+<div class="mask" id="mDegrade"><div class="mdl w4">
+  <div class="mh"><u style="color:var(--wn);font-size:18px">⚡</u><h3>开启降级模式</h3><div class="x" onclick="closeM('mDegrade')">✕</div></div>
+  <div class="mc">
+    <div class="alert r" style="margin-bottom:16px"><u>⚠</u><div>开启后：① 顾客扫码下单入口<b>立即关闭</b>；② 新单默认走线下，需在「补录人工单」录入；③ 收款走现金/POS，不经过微信/支付宝。</div></div>
+    <div class="fg"><label>降级原因</label><select class="sel">
+      <option>系统故障（后端/网络）</option><option>支付渠道异常</option><option>打印机批量离线</option><option>演练</option></select></div>
+    <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div><span>通知所有在岗员工</span></label></div>
+    <div class="hint">降级期间营业不中断，但线上支付暂停。故障恢复后请记得关闭，否则顾客无法扫码点餐。</div>
+  </div>
+  <div class="mf"><span class="l">建议在 21:30 后排查修复</span>
+    <button class="btn" onclick="closeM('mDegrade')">取消</button>
+    <button class="btn dan" onclick="setDegrade(true)">确认开启</button></div>
+</div></div>
+
+<!-- 结账弹窗 -->
+<div class="mask" id="mPay"><div class="mdl w7">
+  <div class="mh"><h3 id="payTitle">结账 · B02 牡丹厅</h3><div class="x" onclick="closeM('mPay')">✕</div></div>
+  <div class="mc">
+    <div class="bill" style="margin-bottom:18px">
+      <div class="bill-r"><span>宫保鸡丁 ×2</span><b>¥96.00</b></div>
+      <div class="bill-r"><span>水煮牛肉 ×1</span><b>¥68.00</b></div>
+      <div class="bill-r"><span>麻婆豆腐 ×1</span><b>¥32.00</b></div>
+      <div class="bill-r"><span>米饭 ×8</span><b>¥24.00</b></div>
+      <div class="bill-r"><span>餐位费 ¥2 ×10</span><b>¥20.00</b></div>
+      <div class="bill-hr"></div>
+      <div class="bill-r"><span>小计</span><b>¥240.00</b></div>
+      <div class="bill-r"><span>会员折扣 9 折（二期）</span><b style="color:var(--ok)">−¥24.00</b></div>
+      <div class="bill-t"><span>应收</span><b id="payAmt">¥216.00</b></div>
+    </div>
+    <h4 style="font-size:14px;margin-bottom:12px">选择收款方式</h4>
+    <div class="pay-g" id="payG">
+      <div class="pay-o wx on" onclick="pickPay(this)"><u>◉</u><b>微信支付</b><small>扫码收款 · 原路可退</small></div>
+      <div class="pay-o ali" onclick="pickPay(this)"><u>◉</u><b>支付宝</b><small>扫码收款 · 原路可退</small></div>
+      <div class="pay-o" onclick="pickPay(this)"><u>◉</u><b>现金</b><small>线下已收 · 不需扫码</small></div>
+      <div class="pay-o" onclick="pickPay(this)"><u>◉</u><b>POS 刷卡</b><small>线下已收 · 刷实体卡</small></div>
+    </div>
+    <div class="alert b" style="margin-top:16px;font-size:12px"><u>ⓘ</u>
+      <div>结账主体是<b>整桌会话</b>，不是单笔订单。双重防重：结账中锁定会话禁止加菜，数据库部分唯一索引阻断重复出账。折扣与会员为二期功能，本期金额按服务端重算。</div></div>
+  </div>
+  <div class="mf"><span class="l" id="payHint">应收 ¥216.00</span>
+    <button class="btn" onclick="closeM('mPay')">取消</button>
+    <button class="btn pri lg" onclick="doPay()">确认收款</button></div>
+</div></div>
+
+<!-- 订单详情弹窗 -->
+<div class="mask" id="mOrder"><div class="mdl w7">
+  <div class="mh"><h3>订单详情</h3><div class="x" onclick="closeM('mOrder')">✕</div></div>
+  <div class="mc">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <dl class="kv">
+        <dt>订单号</dt><dd class="mono">JF20260823-0079</dd>
+        <dt>桌号</dt><dd><b>B03</b> 兰花厅</dd>
+        <dt>结账模式</dt><dd><span class="tag p">后付</span></dd>
+        <dt>渠道</dt><dd><span class="tag g">微信</span></dd>
+        <dt>来源</dt><dd>线上扫码</dd>
+      </dl>
+      <dl class="kv">
+        <dt>状态</dt><dd><span class="tag r">需人工处理</span></dd>
+        <dt>应收</dt><dd><b class="mono">¥328.00</b></dd>
+        <dt>实收</dt><dd><b class="mono" style="color:var(--er)">¥656.00</b></dd>
+        <dt>发生时间</dt><dd class="mono">18:42:11</dd>
+        <dt>操作人</dt><dd>系统自动识别</dd>
+      </dl>
+    </div>
+    <div class="ch" style="padding:14px 0;border:none"><h3 style="font-size:14px">明细</h3></div>
+    <table style="font-size:13px"><thead><tr><th>菜品</th><th>数量</th><th>单价</th><th>小计</th></tr></thead>
+      <tbody><tr><td>宫保鸡丁</td><td class="num">2</td><td class="num">¥48.00</td><td class="num">¥96.00</td></tr>
+      <tr><td>水煮牛肉</td><td class="num">1</td><td class="num">¥68.00</td><td class="num">¥68.00</td></tr>
+      <tr><td>麻婆豆腐</td><td class="num">1</td><td class="num">¥32.00</td><td class="num">¥32.00</td></tr>
+      <tr><td>米饭</td><td class="num">8</td><td class="num">¥3.00</td><td class="num">¥24.00</td></tr></tbody>
+      <tfoot><tr style="background:var(--head);font-weight:600"><td colspan="3">合计</td><td class="num">¥220.00</td></tr></tfoot></table>
+    <div class="alert r" style="margin-top:16px"><u>⚠</u>
+      <div><b>异常说明</b>：系统在 18:42:11 收到两条微信支付成功回调，金额各 ¥328.00（实际应为 ¥220.00）。
+      <code class="mono">uniq_order_success_payment</code> 索引已阻断第二笔入账，多出一笔 ¥328.00 待原路退款。</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mOrder')">关闭</button>
+    <button class="btn dan" onclick="closeM('mOrder');openM('mManual')">去处理</button></div>
+</div></div>
+
+<!-- 人工处理弹窗 -->
+<div class="mask" id="mManual"><div class="mdl w7">
+  <div class="mh"><h3>人工处理 · 资金异常</h3><div class="x" onclick="closeM('mManual')">✕</div></div>
+  <div class="mc">
+    <div class="alert r" style="margin-bottom:18px"><u>⚠</u>
+      <div>处理方式将记入操作日志，且<b>不可跨渠道退款</b>。营业高峰（17:00–21:30）仅建议记录，次日 21:30 后处理退款。</div></div>
+    <div class="fg"><label>处理动作</label><select class="sel" id="manAct">
+      <option>原路退回多收金额</option><option>按服务端重算金额补收</option><option>差额核销（跑单/免单）</option></select></div>
+    <div class="fg"><label>退款/核销金额</label><input class="inp" value="328.00" id="manAmt"></div>
+    <div class="fg"><label>原渠道</label><input class="inp" value="微信支付（订单 JF20260823-0079）" readonly></div>
+    <div class="fg"><label>处理说明</label><textarea class="inp" rows="3" placeholder="如：重复扣款，第二笔 ¥328.00 原路退回"></textarea></div>
+    <div class="hint">处理后将把订单置为「已退款/已处理」，从异常队列移除。红包/优惠券等二期功能暂不参与。</div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mManual')">取消</button>
+    <button class="btn pri" onclick="tst('g','已处理：原路退回 ¥328.00，订单状态已更新');closeM('mManual')">确认处理</button></div>
+</div></div>
+
+<!-- 补打改目标弹窗 -->
+<div class="mask" id="mReprint"><div class="mdl w4">
+  <div class="mh"><h3>补打 / 更改打印机</h3><div class="x" onclick="closeM('mReprint')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label>任务</label><input class="inp" value="PT-2418 · JF20260823-0093 · A03" readonly></div>
+    <div class="fg"><label>改投目标打印机</label><select class="sel">
+      <option>凉菜档（在线）</option><option>吧台（在线）</option><option>热菜档（离线 · 不建议）</option></select></div>
+    <div class="alert o" style="font-size:12px"><u>⚠</u><div>热菜档当前离线，改投它仍会失败。建议改投「凉菜档」或「吧台」。</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mReprint')">取消</button>
+    <button class="btn pri" onclick="tst('g','已补打至凉菜档');closeM('mReprint')">确认补打</button></div>
+</div></div>
+
+<!-- 新增/编辑菜品 -->
+<div class="mask" id="mDish"><div class="mdl w7">
+  <div class="mh"><h3>编辑菜品 · 宫保鸡丁</h3><div class="x" onclick="closeM('mDish')">✕</div></div>
+  <div class="mc">
+    <div class="f2">
+      <div class="fg"><label><i>*</i>菜名</label><input class="inp" value="宫保鸡丁"></div>
+      <div class="fg"><label><i>*</i>价格</label><input class="inp" value="48.00"></div>
+    </div>
+    <div class="f2">
+      <div class="fg"><label>所属分类</label><select class="sel"><option>热菜</option><option>凉菜</option></select></div>
+      <div class="fg"><label>出单档口</label><select class="sel"><option>热菜档</option><option>凉菜档</option><option>吧台</option></select></div>
+    </div>
+    <div class="fg"><label>规格</label><div style="display:flex;gap:8px;align-items:center">
+      <input class="inp" value="小份 ¥42 | 大份 ¥58" style="flex:1">
+      <button class="btn sm" onclick="tst('b','已添加规格')">+ 规格</button></div>
+      <small>规格用「|」分隔，价格独立。加料在下方配置。</small></div>
+    <div class="fg"><label>加料</label><div style="display:flex;gap:8px;align-items:center">
+      <input class="inp" value="加辣 | 加花生 ¥3 | 免葱" style="flex:1">
+      <button class="btn sm" onclick="tst('b','已添加加料')">+ 加料</button></div></div>
+    <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+      <span>立即上架（关闭则存为草稿，上线时再开）</span></label></div>
+    <div class="fg"><label class="swl"><div class="sw" onclick="tglSw(this)"></div>
+      <span>设为沽清（临时下架，双端灰显）</span></label></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mDish')">取消</button>
+    <button class="btn pri" onclick="tst('g','已保存并同步双端');closeM('mDish')">保存</button></div>
+</div></div>
+
+<!-- 新增分类 -->
+<div class="mask" id="mCat"><div class="mdl w4">
+  <div class="mh"><h3>新增分类</h3><div class="x" onclick="closeM('mCat')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label><i>*</i>分类名称</label><input class="inp" placeholder="如：烧烤"></div>
+    <div class="fg"><label>排序</label><input class="inp" value="7"></div>
+    <div class="fg"><label>默认出单档口</label><select class="sel"><option>热菜档</option><option>凉菜档</option><option>吧台</option></select></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mCat')">取消</button>
+    <button class="btn pri" onclick="tst('g','分类已新增');closeM('mCat')">确认</button></div>
+</div></div>
+
+<!-- 桌台编辑 -->
+<div class="mask" id="mTable"><div class="mdl w4">
+  <div class="mh"><h3>编辑桌台 · A03</h3><div class="x" onclick="closeM('mTable')">✕</div></div>
+  <div class="mc">
+    <div class="f2">
+      <div class="fg"><label><i>*</i>桌号</label><input class="inp" value="A03"></div>
+      <div class="fg"><label><i>*</i>座位数</label><input class="inp" value="4"></div>
+    </div>
+    <div class="fg"><label>所属区域</label><select class="sel"><option>大厅靠窗</option><option>包间二楼</option><option>露台</option></select></div>
+    <div class="fg"><label>位置备注</label><input class="inp" value="窗边第 3 桌"></div>
+    <div class="fg"><label>结账模式</label><select class="sel" onchange="tst('b','修改仅对新开台生效')">
+      <option>先付（散台）</option><option>后付（包间/正餐）</option><option>仅点单·前台结（过渡/核单）</option></select></div>
+    <div class="alert b" style="font-size:12px"><u>ⓘ</u><div>结账模式变更<b>仅对新开台生效</b>，当前进行中的会话不受影响。</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mTable')">取消</button>
+    <button class="btn pri" onclick="tst('g','已保存');closeM('mTable')">保存</button></div>
+</div></div>
+
+<!-- 新增区域 -->
+<div class="mask" id="mZone"><div class="mdl w4">
+  <div class="mh"><h3>新增区域</h3><div class="x" onclick="closeM('mZone')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label><i>*</i>区域名称</label><input class="inp" placeholder="如：二楼大厅"></div>
+    <div class="fg"><label>默认结账模式</label><select class="sel">
+      <option>先付（散台）</option><option>后付（包间/正餐）</option></select></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mZone')">取消</button>
+    <button class="btn pri" onclick="tst('g','区域已新增');closeM('mZone')">确认</button></div>
+</div>
+
+<!-- 批量设置结账模式 -->
+<div class="mask" id="mBatch"><div class="mdl w4">
+  <div class="mh"><h3>批量设置结账模式</h3><div class="x" onclick="closeM('mBatch')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label>目标桌台</label><select class="sel"><option>全部包间（B01–B06）</option>
+      <option>全部大厅（A01–A08）</option><option>全部露台（C01–C04）</option></select></div>
+    <div class="fg"><label>设为</label><select class="sel"><option>后付（包间/正餐）</option>
+      <option>先付（散台）</option><option>仅点单·前台结（过渡/核单）</option></select></div>
+    <div class="alert o" style="font-size:12px"><u>⚠</u><div>仅对<b>新开台</b>生效，进行中的会话不变。适合「所有包间设为后付」这类操作。</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mBatch')">取消</button>
+    <button class="btn pri" onclick="tst('g','已批量设置');closeM('mBatch')">确认</button></div>
+</div></div>
+
+<!-- 二维码批量生成 -->
+<div class="mask" id="mQr"><div class="mdl w4">
+  <div class="mh"><h3>批量生成二维码</h3><div class="x" onclick="closeM('mQr')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label>生成范围</label><select class="sel"><option>全部桌台（24）</option>
+      <option>大厅（A01–A08）</option><option>包间（B01–B06）</option><option>露台（C01–C04）</option></select></div>
+    <div class="fg"><label>版本</label><div class="lg-row">
+      <select class="sel"><option>沿用当前主版本 v2</option><option>生成新版本（旧版立即失效）</option></select></div>
+      <small>生成新版本相当于一次性吊销所有旧桌贴，用于桌贴被掉包或大规模磨损时。</small></div>
+    <div class="fg"><label class="swl"><div class="sw on" onclick="tglSw(this)"></div>
+      <span>同时导出 PDF（送印刷）</span></label></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mQr')">取消</button>
+    <button class="btn pri" onclick="tst('g','已生成并导出 PDF');closeM('mQr')">生成</button></div>
+</div></div>
+
+<!-- 二维码吊销 -->
+<div class="mask" id="mRevoke"><div class="mdl w4">
+  <div class="mh"><h3>吊销二维码批次</h3><div class="x" onclick="closeM('mRevoke')">✕</div></div>
+  <div class="mc">
+    <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+      <div>吊销后该批次所有桌贴<b>立即失效</b>，顾客扫码会提示「二维码已失效」。通常用于桌贴被掉包或发现伪造。</div></div>
+    <div class="fg"><label>吊销批次</label><input class="inp" value="QR-0003（包间 B01–B06 · v2）" readonly></div>
+    <div class="fg"><label>原因</label><select class="sel"><option>桌贴磨损/脱落</option>
+      <option>疑似被掉包</option><option>桌台布局调整</option></select></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mRevoke')">取消</button>
+    <button class="btn dan" onclick="tst('r','已吊销，旧码立即失效，请尽快生成新批次');closeM('mRevoke')">确认吊销</button></div>
+</div></div>
+
+<!-- 日结确认 -->
+<div class="mask" id="mClose"><div class="mdl w4">
+  <div class="mh"><h3>执行日结</h3><div class="x" onclick="closeM('mClose')">✕</div></div>
+  <div class="mc">
+    <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+      <div>当前存在现金差异 ¥30.00 未平、B02 挂账 ¥1,286.00 未结账。日结会锁定当日数据，异常建议先处理。</div></div>
+    <dl class="kv">
+      <dt>已收营业额</dt><dd><b class="num">¥8,612.50</b></dd>
+      <dt>未平差异</dt><dd><b class="num" style="color:var(--er)">−¥30.00</b></dd>
+      <dt>挂账（不计）</dt><dd>¥1,286.00</dd>
+      <dt>核销损耗</dt><dd>¥268.00</dd>
+    </dl>
+    <div class="fg" style="margin-top:16px"><label class="swl"><div class="sw" onclick="tglSw(this)"></div>
+      <span>已知晓差异，强制日结</span></label></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mClose')">取消</button>
+    <button class="btn pri" onclick="tst('g','日结已完成，当日数据已锁定');closeM('mClose')">确认日结</button></div>
+</div></div>
+
+<!-- 差异处理 -->
+<div class="mask" id="mDiff"><div class="mdl w4">
+  <div class="mh"><h3>处理现金差异</h3><div class="x" onclick="closeM('mDiff')">✕</div></div>
+  <div class="mc">
+    <div class="fg"><label>差异金额</label><input class="inp" value="−30.00" readonly></div>
+    <div class="fg"><label>处理方式</label><select class="sel"><option>确认为找零错误，差额核销</option>
+      <option>补录遗漏的现金单</option><option>录入为现金短款损耗</option></select></div>
+    <div class="fg"><label>说明</label><textarea class="inp" rows="3" placeholder="如：18:30 前后高峰找零失误"></textarea></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mDiff')">取消</button>
+    <button class="btn pri" onclick="tst('g','差异已平，可日结');closeM('mDiff')">确认</button></div>
+</div></div>
+
+<!-- 恢复确认 -->
+<div class="mask" id="mRestore"><div class="mdl w4">
+  <div class="mh"><h3>从备份恢复</h3><div class="x" onclick="closeM('mRestore')">✕</div></div>
+  <div class="mc">
+    <div class="alert r" style="margin-bottom:16px"><u>⚠</u>
+      <div>恢复会<b>覆盖当前数据库</b>。严禁在营业高峰（11:00–14:00 / 17:00–21:30）操作。请确认当前已切人工降级或已打烊。</div></div>
+    <div class="fg"><label>恢复源</label><input class="inp" value="08-23 03:00 全量（已校验）" readonly></div>
+    <div class="fg"><label>恢复类型</label><select class="sel"><option>恢复到指定时间点（PITR，需 WAL）</option>
+      <option>仅恢复单张表</option></select></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mRestore')">取消</button>
+    <button class="btn dan" onclick="tst('r','已进入恢复流程，预计 22 分钟，请耐心等待');closeM('mRestore')">确认恢复</button></div>
+</div></div>
+
+<!-- 新增 / 编辑员工 -->
+<div class="mask" id="mStaff"><div class="mdl w4">
+  <div class="mh"><h3 id="mStaffTitle">新增员工</h3><div class="x" onclick="closeM('mStaff')">✕</div></div>
+  <div class="mc">
+    <div class="f2">
+      <div class="fg"><label><i>*</i>姓名</label><input class="inp" id="stName" placeholder="如：赵收银"></div>
+      <div class="fg"><label><i>*</i>工号</label><input class="inp" id="stId" placeholder="自动生成或手填"></div>
+    </div>
+    <div class="f2">
+      <div class="fg"><label>角色</label><select class="sel" id="stRole"><option>收银员</option><option>服务员</option>
+        <option>后厨</option><option>店长</option></select></div>
+      <div class="fg"><label>手机号</label><input class="inp" id="stPhone" placeholder="用于联系与短信通知"></div>
+    </div>
+    <div class="fg"><label>可用功能</label><input class="inp" id="stFunc" value="收银台 · 结账 · 退菜 · 补录" style="color:var(--t2)"></div>
+    <div class="alert b" style="font-size:12px"><u>ⓘ</u><div>核销与降级开关<b>仅店长</b>。工号会写入每笔订单用于追责与对账；手机号用于联系与短信兜底通知。</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeM('mStaff')">取消</button>
+    <button class="btn pri" id="stSave" onclick="saveStaff()">保存</button></div>
+</div></div>
+
+<!-- 新增 / 编辑按人收费项 -->
+<div class="mask" id="mPer"><div class="mdl w4">
+  <div class="mh"><h3 id="mPerTitle">新增收费项</h3><div class="x" onclick="closeM('mPer')">✕</div></div>
+  <div class="mc">
+    <div class="f2">
+      <div class="fg"><label><i>*</i>收费项名称</label><input class="inp" id="perName" placeholder="如：餐位费"></div>
+      <div class="fg"><label><i>*</i>单价（元/位）</label><input class="inp" id="perPrice" placeholder="如：2.00" style="width:100%"></div>
+    </div>
+    <div class="f2">
+      <div class="fg"><label class="swl"><div class="sw on" id="perDef" onclick="tglSw(this)"></div><span>默认勾选</span></label></div>
+      <div class="fg"><label class="swl"><div class="sw" id="perReq" onclick="tglSw(this)"></div><span>必选（顾客不可取消）</span></label></div>
+    </div>
+    <div class="fg"><label class="swl"><div class="sw on" id="perOn" onclick="tglSw(this)"></div>
+      <span>启用（关闭后顾客端不再展示）</span></label></div>
+    <div class="alert b" style="font-size:12px"><u>ⓘ</u><div>金额 = 单价 × 就餐人数，计入账单与对账；必选项（如餐位费）顾客不可取消。</div></div>
+  </div>
+  <div class="mf"><button class="btn dan-o" id="perDel" style="margin-right:auto;display:none" onclick="delPer()">删除</button>
+    <button class="btn" onclick="closeM('mPer')">取消</button>
+    <button class="btn pri" id="perSave" onclick="savePer()">保存</button></div>
+</div></div>
+
+<script>
+/* ===== 登录 / 主题 / 路由 ===== */
+var ROLE={n:'张店长',r:'店长 · 工号1001',a:'张',role:'owner'};
+function pickRole(el,name,scope){
+  document.querySelectorAll('.lg-role div').forEach(function(d){d.classList.remove('on')});
+  el.classList.add('on');
+  var map={'店长':{n:'张店长',r:'店长 · 工号1001',a:'张',u:'1001',role:'owner'},
+           '收银员':{n:'李收银',r:'收银员 · 工号1003',a:'李',u:'1003',role:'cashier'},
+           '后厨':{n:'王师傅',r:'后厨 · 工号2001',a:'王',u:'2001',role:'kitchen'}};
+  ROLE=map[name];document.getElementById('lgU').value=ROLE.u;
+}
+function doLogin(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('shell').classList.add('on');
+  document.getElementById('uName').textContent=ROLE.n;
+  document.getElementById('uRole').textContent=ROLE.r;
+  document.getElementById('uAvt').textContent=ROLE.a;
+  applyPermission();
+  renderAll();
+  if(ROLE.role==='kitchen'){go('kds');tst('b','后厨角色已直达 KDS 大屏（其他功能已按权限隐藏）');}
+  else tst('g','登录成功，欢迎回来 '+ROLE.n+'（'+(ROLE.role==='owner'?'店长':'收银员')+'权限）');
+}
+function doLogout(){
+  if(!confirm('确认退出登录？'))return;
+  document.getElementById('shell').classList.remove('on');
+  document.getElementById('login').style.display='flex';
+  closeKds();
+}
+function toggleTheme(){
+  var h=document.documentElement,d=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',d?'light':'dark');
+  document.getElementById('thBtn').textContent=d?'☾':'☀';
+  tst('b',d?'已切换到亮色主题':'已切换到暗色主题');
+}
+function toggleSider(){
+  document.getElementById('sider').classList.toggle('mini');
+  document.getElementById('main').classList.toggle('mini');
+}
+var CRUMB={dash:'收银工作台 / <b>营业概览</b>',tables:'收银工作台 / <b>桌台图</b>',
+orders:'收银工作台 / <b>订单管理</b>',pos:'收银工作台 / <b>代客点单</b>',
+offline:'收银工作台 / <b>补录人工单</b>',manual:'收银工作台 / <b>需人工处理</b>',
+print:'后厨 / <b>打印任务</b>',menu:'菜单与桌台 / <b>分类与菜品</b>',
+soldout:'菜单与桌台 / <b>沽清管理</b>',import:'菜单与桌台 / <b>批量导入</b>',
+tbmgr:'菜单与桌台 / <b>桌台管理</b>',qrcode:'菜单与桌台 / <b>二维码管理</b>',
+perhead:'菜单与桌台 / <b>按人收费项</b>',
+report:'报表与对账 / <b>营业报表</b>',recon:'报表与对账 / <b>多来源对账</b>',
+refund:'报表与对账 / <b>退款与核销</b>',staff:'系统 / <b>员工与权限</b>',
+log:'系统 / <b>操作日志</b>',setting:'系统 / <b>系统设置</b>',backup:'系统 / <b>备份与恢复</b>'};
+function go(p){
+  if(p==='kds'){openKds();return;}
+  var roles=PERM[p]||[];
+  if(roles.indexOf(ROLE.role)<0){tst('r','无权限访问该功能');return;}
+  document.querySelectorAll('.pg').forEach(function(s){s.classList.remove('on')});
+  var t=document.getElementById('p-'+p);if(t)t.classList.add('on');
+  document.querySelectorAll('.mi').forEach(function(m){m.classList.toggle('on',m.dataset.p===p)});
+  document.getElementById('crumb').innerHTML=CRUMB[p]||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('menu').addEventListener('click',function(e){
+  var mi=e.target.closest('.mi');if(mi)go(mi.dataset.p);
+});
+/* 分类切换：点击左侧分类，切换高亮并同步右侧菜品卡片标题/数量 */
+(function(){
+  var cl=document.getElementById('catList');
+  if(!cl)return;
+  cl.addEventListener('click',function(e){
+    var item=e.target.closest('[data-cat]');if(!item)return;
+    cl.querySelectorAll('[data-cat]').forEach(function(d){d.classList.remove('on')});
+    item.classList.add('on');
+    var n=document.getElementById('dishCatName'),c=document.getElementById('dishCatCount');
+    if(n)n.textContent=item.dataset.cat;
+    if(c)c.textContent=item.dataset.count+' 个菜品';
+    tst('b','已切换到分类：'+item.dataset.cat+'（原型演示：菜品列表以实际数据为准）');
+  });
+})();
+/* 按人收费项：新增/编辑 委托点击（不依赖内联 onclick，兼容性更好） */
+(function(){
+  var sec=document.getElementById('p-perhead');
+  if(!sec)return;
+  sec.addEventListener('click',function(e){
+    var btn=e.target.closest('[data-per]');if(!btn)return;
+    if(btn.dataset.per==='add'){openPer('add');return;}
+    if(btn.dataset.per==='edit'){
+      openPer('edit',btn.dataset.name,btn.dataset.price,
+        btn.dataset.def==='1',btn.dataset.req==='1',btn.dataset.on!=='0');
+    }
+  });
+})();
+
+/* ===== Toast / 弹窗 / 开关 ===== */
+function tst(type,msg){
+  var ic={g:'✓',r:'✕',o:'⚠',b:'ⓘ'}[type]||'ⓘ';
+  var d=document.createElement('div');d.className='tst '+type;
+  d.innerHTML='<u>'+ic+'</u><span>'+msg+'</span>';
+  document.getElementById('toast').appendChild(d);
+  setTimeout(function(){d.style.transition='.3s';d.style.opacity='0';d.style.transform='translateY(-12px)';
+    setTimeout(function(){d.remove()},300)},2600);
+}
+function openM(id){document.getElementById(id).classList.add('on')}
+function closeM(id){document.getElementById(id).classList.remove('on')}
+document.querySelectorAll('.mask').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')});
+});
+function openDrw(id){document.getElementById('dmTable').classList.add('on');document.getElementById(id).classList.add('on')}
+function closeDrw(id){document.getElementById('dmTable').classList.remove('on');document.getElementById(id).classList.remove('on')}
+document.getElementById('dmTable').addEventListener('click',function(){closeDrw('dwTable')});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){document.querySelectorAll('.mask.on').forEach(function(m){m.classList.remove('on')});closeDrw('dwTable');}
+});
+function tglSw(el){el.classList.toggle('on')}
+/* 新增 / 编辑 / 删除 按人收费项 */
+function openPer(mode,name,price,def,req,on){
+  var title=document.getElementById('mPerTitle');
+  var del=document.getElementById('perDel');
+  if(mode==='edit'){
+    title.textContent='编辑收费项';
+    del.style.display='';
+    document.getElementById('perName').value=name||'';
+    document.getElementById('perPrice').value=(price||'').replace(/[^\d.]/g,'');
+    document.getElementById('perDef').classList.toggle('on',!!def);
+    document.getElementById('perReq').classList.toggle('on',!!req);
+    document.getElementById('perOn').classList.toggle('on',on!==false);
+  }else{
+    title.textContent='新增收费项';
+    del.style.display='none';
+    document.getElementById('perName').value='';
+    document.getElementById('perPrice').value='';
+    document.getElementById('perDef').classList.add('on');
+    document.getElementById('perReq').classList.remove('on');
+    document.getElementById('perOn').classList.add('on');
+  }
+  openM('mPer');
+}
+function savePer(){
+  var name=document.getElementById('perName').value.trim();
+  var price=document.getElementById('perPrice').value.trim();
+  if(!name){tst('o','请填写收费项名称');return;}
+  if(!price||isNaN(parseFloat(price))){tst('o','请填写正确的单价');return;}
+  tst('g','按人收费项已保存');closeM('mPer');
+}
+function delPer(){
+  if(!confirm('确认删除该收费项？删除后顾客端不再展示。'))return;
+  tst('r','收费项已删除');closeM('mPer');
+}
+/* 新增 / 编辑员工 */
+function openStaff(mode,id,name,role,phone){
+  var title=document.getElementById('mStaffTitle');
+  var save=document.getElementById('stSave');
+  if(mode==='edit'){
+    title.textContent='编辑员工';
+    save.setAttribute('onclick',"saveStaff('edit')");
+    document.getElementById('stName').value=name||'';
+    document.getElementById('stId').value=id||'';
+    document.getElementById('stRole').value=role||'收银员';
+    document.getElementById('stPhone').value=phone||'';
+    document.getElementById('stFunc').value=
+      role==='店长'?'全部功能 · 含核销/退款/日结':
+      role==='收银员'?'收银台 · 结账 · 退菜 · 补录':
+      role==='后厨'?'仅 KDS 大屏 · 出餐操作':'桌台图 · 代客点单 · 清台';
+  }else{
+    title.textContent='新增员工';
+    save.setAttribute('onclick',"saveStaff('add')");
+    document.getElementById('stName').value='';
+    document.getElementById('stId').value='';
+    document.getElementById('stRole').value='收银员';
+    document.getElementById('stPhone').value='';
+    document.getElementById('stFunc').value='收银台 · 结账 · 退菜 · 补录';
+  }
+  openM('mStaff');
+}
+function saveStaff(mode){
+  var name=document.getElementById('stName').value.trim();
+  var phone=document.getElementById('stPhone').value.trim();
+  if(!name){tst('o','请填写姓名');return;}
+  if(phone && !/^1\d{10}$/.test(phone.replace(/\D/g,''))){tst('o','手机号格式不正确');return;}
+  tst('g', mode==='edit'?'员工信息已更新':'员工已新增');
+  closeM('mStaff');
+}
+function tglSold(el){
+  el.classList.toggle('on');
+  var name=el.parentElement.querySelector('b').textContent;
+  if(el.classList.contains('on')){el.parentElement.style.background='';el.parentElement.style.borderColor='';
+    tst('g',name+' 已恢复在售，双端菜单同步');}
+  else{tst('o',name+' 已沽清，微信/支付宝两端菜单已灰显');}
+}
+document.querySelectorAll('.seg').forEach(function(s){
+  s.addEventListener('click',function(e){
+    if(e.target.tagName!=='DIV'||e.target===s)return;
+    s.querySelectorAll('div').forEach(function(d){d.classList.remove('on')});
+    e.target.classList.add('on');
+  });
+});
+document.querySelectorAll('.tabs').forEach(function(s){
+  s.addEventListener('click',function(e){
+    if(e.target.tagName!=='DIV')return;
+    s.querySelectorAll('div').forEach(function(d){d.classList.remove('on')});
+    e.target.classList.add('on');
+  });
+});
+/* 系统设置：tabs 切换面板 */
+(function(){
+  var tabs=document.getElementById('setTabs');if(!tabs)return;
+  var map={biz:'tab-biz',pay:'tab-pay',print:'tab-print',notify:'tab-notify'};
+  tabs.addEventListener('click',function(e){
+    var t=e.target.dataset&&e.target.dataset.tab;if(!t)return;
+    Object.keys(map).forEach(function(k){
+      var p=document.getElementById(map[k]);if(p)p.style.display=(k===t)?'':'none';
+    });
+  });
+})();
+document.querySelectorAll('.pos-cat').forEach(function(s){
+  s.addEventListener('click',function(e){
+    var d=e.target.closest('div');if(!d)return;
+    s.querySelectorAll('div').forEach(function(x){x.classList.remove('on')});
+    d.classList.add('on');
+  });
+});
+
+/* ===== 权限校验（对照设计文档 16.2 权限矩阵） ===== */
+var PERM={
+ dash:['owner','cashier'],tables:['owner','cashier'],orders:['owner','cashier'],
+ pos:['owner','cashier'],offline:['owner','cashier'],manual:['owner','cashier'],
+ kds:['owner','kitchen'],print:['owner','cashier'],
+ menu:['owner'],soldout:['owner'],import:['owner'],tbmgr:['owner'],qrcode:['owner'],perhead:['owner'],
+ report:['owner','cashier'],recon:['owner'],refund:['owner'],
+ staff:['owner'],log:['owner'],setting:['owner'],backup:['owner']
+};
+function applyPermission(){
+  var role=ROLE.role||'cashier';
+  document.querySelectorAll('#menu .mi').forEach(function(mi){
+    var p=mi.dataset.p,roles=PERM[p]||[];
+    mi.style.display=roles.indexOf(role)>-1?'':'none';
+  });
+  var dg=document.getElementById('degradeBtn');if(dg)dg.style.display=role==='owner'?'':'none';
+}
+
+/* ===== 降级模式 ===== */
+function setDegrade(on){
+  document.getElementById('banner').classList.toggle('on',on);
+  closeM('mDegrade');
+  var chip=document.getElementById('bizChip');
+  if(on){chip.style.background='var(--wn-bg)';chip.style.borderColor='var(--wn-bd)';chip.style.color='var(--wn)';
+    chip.innerHTML='<i style="background:var(--wn)"></i><span>降级模式运行中</span>';
+    tst('r','降级模式已开启，顾客扫码下单已关闭');}
+  else{chip.style.background='var(--ok-bg)';chip.style.borderColor='var(--ok-bd)';chip.style.color='var(--ok)';
+    chip.innerHTML='<i></i><span>晚市营业中 · 17:00–21:30</span>';
+    tst('g','降级模式已关闭，扫码点餐恢复');}
+}
+
+/* ===== 桌台数据 ===== */
+var TABLES=[
+ {no:'A01',z:'A',seat:4,pos:'进门左侧第1桌',mode:'prepay',st:'empty'},
+ {no:'A02',z:'A',seat:2,pos:'窗边第2桌',mode:'prepay',st:'dining',amt:168,open:'18:28',ppl:2,ch:'现金'},
+ {no:'A03',z:'A',seat:4,pos:'窗边第3桌',mode:'prepay',st:'dining',amt:246,open:'18:52',ppl:3,ch:'微信'},
+ {no:'A04',z:'A',seat:4,pos:'窗边第4桌',mode:'frontend',st:'empty'},
+ {no:'A05',z:'A',seat:6,pos:'靠柱子',mode:'prepay',st:'dining',amt:286,open:'18:35',ppl:5,ch:'现金'},
+ {no:'A06',z:'A',seat:4,pos:'中间区',mode:'prepay',st:'clean',open:'19:02'},
+ {no:'A07',z:'A',seat:2,pos:'角落',mode:'prepay',st:'empty'},
+ {no:'A08',z:'A',seat:4,pos:'靠吧台',mode:'postpay',st:'unpaid',amt:268,open:'17:48',ppl:4,note:'跑单已核销'},
+ {no:'B01',z:'B',seat:8,pos:'梅花厅',mode:'postpay',st:'empty'},
+ {no:'B02',z:'B',seat:10,pos:'牡丹厅·靠楼梯',mode:'postpay',st:'unpaid',amt:1286,open:'17:42',ppl:9,lock:1},
+ {no:'B03',z:'B',seat:12,pos:'兰花厅',mode:'postpay',st:'dining',amt:648,open:'18:15',ppl:10,ch:'微信'},
+ {no:'B04',z:'B',seat:8,pos:'竹韵厅',mode:'postpay',st:'empty'},
+ {no:'B05',z:'B',seat:6,pos:'菊香厅',mode:'postpay',st:'merged',amt:420,open:'18:40',ppl:6,note:'与B06并桌'},
+ {no:'B06',z:'B',seat:6,pos:'荷风厅',mode:'postpay',st:'merged',amt:0,open:'18:40',note:'主桌B05'},
+ {no:'C01',z:'C',seat:4,pos:'遮阳伞下·靠栏杆',mode:'prepay',st:'dining',amt:132,open:'18:58',ppl:2,ch:'支付宝'},
+ {no:'C02',z:'C',seat:4,pos:'露台中间',mode:'prepay',st:'empty'},
+ {no:'C03',z:'C',seat:6,pos:'露台角落',mode:'frontend',st:'unpaid',amt:88,open:'19:04',ppl:4,note:'仅点单·前台结'},
+ {no:'C04',z:'C',seat:2,pos:'露台边座',mode:'prepay',st:'empty'}
+];
+var STN={empty:'空闲',dining:'就餐中',unpaid:'未结账',clean:'待清台',merged:'并桌'};
+function renderTables(){
+  ['A','B','C'].forEach(function(z){
+    var box=document.getElementById('zone'+z);if(!box)return;
+    box.innerHTML=TABLES.filter(function(t){return t.z===z}).map(function(t){
+      var amt=t.st==='empty'?'':(t.st==='clean'?'<div class="tb-a" style="color:var(--wn);font-size:14px">待清台</div>':
+        '<div class="tb-a">¥'+(t.amt||0).toFixed(2)+'</div>');
+      var sub=t.st==='empty'?'<div class="tb-b">'+t.pos+'</div>':
+        '<div class="tb-b">'+(t.ppl?t.ppl+'人 · ':'')+(t.open||'')+'开台'+(t.note?'<br>'+t.note:'')+'</div>';
+      return '<div class="tb '+t.st+'" onclick="openTable(\''+t.no+'\')">'+
+        '<div class="tb-h"><span class="tb-n">'+t.no+'</span>'+
+        '<span class="tb-m'+(t.mode==='postpay'?' post':'')+'"'+(t.mode==='frontend'?' style="background:var(--info);color:#fff"':'')+'">'+(t.mode==='postpay'?'后付':(t.mode==='frontend'?'前台结':'先付'))+'</span>'+
+        '<span class="tb-s">'+t.seat+'座</span></div>'+sub+amt+
+        '<div class="tb-f"><span class="tag '+({empty:'d',dining:'b',unpaid:'r',clean:'o',merged:'c'}[t.st])+'">'+STN[t.st]+'</span>'+
+        (t.ch?'<span class="hint">'+t.ch+'</span>':'')+'</div>'+
+        (t.lock?'<span class="lk">🔒</span>':'')+'</div>';
+    }).join('');
+  });
+  var up=TABLES.filter(function(t){return t.st==='unpaid'&&t.amt>0}).length;
+  document.getElementById('mbUnpaid').textContent=up;
+}
+function openTable(no){
+  var t=TABLES.filter(function(x){return x.no===no})[0];if(!t)return;
+  document.getElementById('dwTitle').textContent=t.no+' · '+t.pos;
+  var b=document.getElementById('dwBody'),f=document.getElementById('dwFoot');
+  var badge='<span class="tag '+({empty:'d',dining:'b',unpaid:'r',clean:'o',merged:'c'}[t.st])+'">'+STN[t.st]+'</span>';
+  var mode='<span class="tag '+(t.mode==='postpay'?'p':(t.mode==='frontend'?'b':'d'))+'">'+(t.mode==='postpay'?'后付统一结账':(t.mode==='frontend'?'仅点单·前台结':'先付后吃'))+'</span>';
+  if(t.st==='empty'){
+    b.innerHTML='<div class="empty"><u>▦</u><p>该桌当前空闲</p></div>'+
+      '<dl class="kv"><dt>区域</dt><dd>'+({A:'大厅靠窗',B:'包间二楼',C:'露台'}[t.z])+'</dd>'+
+      '<dt>位置</dt><dd>'+t.pos+'</dd><dt>座位</dt><dd>'+t.seat+' 座</dd>'+
+      '<dt>结账模式</dt><dd>'+mode+'</dd></dl>';
+    f.innerHTML='<button class="btn" onclick="closeDrw(\'dwTable\')">关闭</button>'+
+      '<button class="btn pri" onclick="tst(\'g\',\''+t.no+' 已开台\');closeDrw(\'dwTable\')">开台</button>'+
+      '<button class="btn" onclick="closeDrw(\'dwTable\');go(\'pos\')">代客点单</button>';
+    openDrw('dwTable');return;
+  }
+  if(t.st==='clean'){
+    b.innerHTML='<div class="alert o"><u>⚠</u><div><b>顾客已离店，等待清台</b>本桌已完成结账，清台后即可接待新客。</div></div>'+
+      '<dl class="kv" style="margin-top:16px"><dt>状态</dt><dd>'+badge+'</dd>'+
+      '<dt>离店时间</dt><dd class="mono">'+t.open+'</dd><dt>结账情况</dt><dd><span class="tag g">已结清</span></dd></dl>';
+    f.innerHTML='<button class="btn" onclick="closeDrw(\'dwTable\')">关闭</button>'+
+      '<button class="btn pri" onclick="cleanTable(\''+t.no+'\')">确认清台</button>';
+    openDrw('dwTable');return;
+  }
+  var items='<table style="font-size:13px;margin-top:8px"><thead><tr><th>菜品</th><th>数量</th><th>小计</th><th>状态</th></tr></thead><tbody>'+
+    '<tr><td>宫保鸡丁</td><td class="num">2</td><td class="num">¥96.00</td><td><span class="tag g">已出餐</span></td></tr>'+
+    '<tr><td>水煮牛肉 <small class="hint">大份</small></td><td class="num">1</td><td class="num">¥68.00</td><td><span class="tag g">已出餐</span></td></tr>'+
+    '<tr><td>麻婆豆腐 <small class="hint">加辣</small></td><td class="num">1</td><td class="num">¥32.00</td><td><span class="tag b">备餐中</span></td></tr>'+
+    '<tr><td>米饭</td><td class="num">'+(t.ppl||4)+'</td><td class="num">¥'+((t.ppl||4)*3).toFixed(2)+'</td><td><span class="tag g">已出餐</span></td></tr>'+
+    '</tbody></table>';
+  var lockTip=t.lock?'<div class="alert r" style="margin-bottom:14px"><u>🔒</u><div><b>会话已锁定（结账中）</b>为防止金额对不上，锁定期间禁止加菜。取消结账后自动解锁。</div></div>':'';
+  var unpaidTip=(t.st==='unpaid'&&t.amt>0)?'<div class="alert o" style="margin-bottom:14px"><u>⚠</u><div><b>未结账挂账 ¥'+t.amt.toFixed(2)+'</b>钱尚未进任何账户，<b>不计入</b>当日营业额。清台前必须结账或走店长核销。</div></div>':'';
+  b.innerHTML=lockTip+unpaidTip+
+    '<dl class="kv"><dt>状态</dt><dd>'+badge+'</dd><dt>结账模式</dt><dd>'+mode+'</dd>'+
+    '<dt>开台时间</dt><dd class="mono">'+t.open+'</dd><dt>就餐人数</dt><dd>'+(t.ppl||'—')+' 人</dd>'+
+    '<dt>会话号</dt><dd class="mono">SESS-02'+(31+TABLES.indexOf(t))+'</dd>'+
+    (t.ch?'<dt>已收渠道</dt><dd><span class="tag g">'+t.ch+'</span></dd>':'')+
+    '<dt>'+(t.st==='unpaid'?'挂账金额':'已消费')+'</dt><dd><b class="mono" style="font-size:16px'+(t.st==='unpaid'?';color:var(--er)':'')+'">¥'+(t.amt||0).toFixed(2)+'</b></dd></dl>'+
+    '<div class="ch" style="padding:14px 0;border:none"><h3 style="font-size:14px">已点明细</h3></div>'+items;
+  var pay=(t.st==='unpaid'&&t.amt>0)?'<button class="btn pri lg" onclick="closeDrw(\'dwTable\');payTable(\''+t.no+'\')">'+(t.mode==='frontend'?'前台结账收款':'结账收款')+'</button>':
+    '<button class="btn pri" onclick="tst(\'g\',\'已加菜并推送后厨\')">加菜</button>';
+  f.innerHTML='<span class="l">'+(t.mode==='postpay'?'后付：吃完统一结账':(t.mode==='frontend'?'仅点单：前台收银结账':'先付：已收款'))+'</span>'+
+    '<button class="btn" onclick="tst(\'b\',\'已进入转台/并桌选择\')">转台</button>'+
+    '<button class="btn" onclick="closeDrw(\'dwTable\');go(\'pos\')">代点</button>'+pay;
+  openDrw('dwTable');
+}
+function cleanTable(no){
+  var t=TABLES.filter(function(x){return x.no===no})[0];
+  t.st='empty';delete t.amt;delete t.ppl;delete t.open;delete t.ch;delete t.note;
+  renderTables();closeDrw('dwTable');tst('g',no+' 已清台，可接待新客');
+}
+function payTable(no){
+  var t=TABLES.filter(function(x){return x.no===no})[0];
+  window.__payTable=no;
+  document.getElementById('payTitle').textContent='结账 · '+no+' '+t.pos;
+  document.getElementById('payAmt').textContent='¥'+t.amt.toFixed(2);
+  document.getElementById('payHint').textContent='应收 ¥'+t.amt.toFixed(2);
+  openM('mPay');
+}
+function pickPay(el){
+  document.querySelectorAll('#payG .pay-o').forEach(function(d){d.classList.remove('on')});
+  el.classList.add('on');
+}
+function doPay(){
+  var no=window.__payTable,ch=document.querySelector('#payG .pay-o.on b').textContent;
+  var t=TABLES.filter(function(x){return x.no===no})[0];
+  closeM('mPay');
+  tst('g',no+' 结账成功 ¥'+t.amt.toFixed(2)+'（'+ch+'），已打印结账小票');
+  t.st='clean';t.ch=ch;delete t.lock;
+  renderTables();
+  setTimeout(function(){tst('b',no+' 已转为待清台，清台后可接待新客')},900);
+}
+
+/* ===== 订单列表 ===== */
+var ORDERS=[
+ {id:'0093',t:'A03',amt:246.00,mode:'先付',ch:'微信',src:'线上扫码',st:'备餐中',stc:'b',tm:'18:58:39'},
+ {id:'0092',t:'B02',amt:1286.00,mode:'后付',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'18:56:10'},
+ {id:'0091',t:'A08',amt:151.15,mode:'先付',ch:'现金',src:'人工补录',st:'已完成',stc:'g',tm:'18:54:01'},
+ {id:'0090',t:'C02',amt:132.00,mode:'先付',ch:'支付宝',src:'线上扫码',st:'已出餐',stc:'g',tm:'18:51:30'},
+ {id:'0089',t:'B03',amt:648.00,mode:'后付',ch:'—',src:'员工代点',st:'未结账',stc:'r',tm:'18:47:22'},
+ {id:'0088',t:'A05',amt:286.00,mode:'先付',ch:'现金',src:'人工补录',st:'已完成',stc:'g',tm:'18:35:04'},
+ {id:'0087',t:'A04',amt:48.00,mode:'先付',ch:'支付宝',src:'线上扫码',st:'已退款',stc:'d',tm:'18:22:18'},
+ {id:'0079',t:'B03',amt:328.00,mode:'后付',ch:'微信×2',src:'线上扫码',st:'需人工处理',stc:'r',tm:'18:42:11'},
+ {id:'0086',t:'C01',amt:96.00,mode:'先付',ch:'微信',src:'线上扫码',st:'待支付',stc:'o',tm:'18:19:47'},
+ {id:'0085',t:'B05',amt:420.00,mode:'后付',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'18:40:12'},
+ {id:'0084',t:'C03',amt:88.00,mode:'前台结',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'19:04:18'}
+];
+function renderOrders(){
+  var b=document.getElementById('ordBody');if(!b)return;
+  b.innerHTML=ORDERS.map(function(o){
+    var chTag=o.ch==='—'?'<span class="hint">未收款</span>':
+      '<span class="tag '+(o.ch.indexOf('微信')>-1?'g':o.ch.indexOf('支付宝')>-1?'b':o.ch==='现金'?'o':'p')+'">'+o.ch+'</span>';
+    return '<tr'+(o.st==='需人工处理'?' class="tr-warn"':'')+'>'+
+      '<td><b class="mono">JF20260823-'+o.id+'</b></td><td><b>'+o.t+'</b></td>'+
+      '<td><b class="num">¥'+o.amt.toFixed(2)+'</b></td>'+
+      '<td><span class="tag '+(o.mode==='后付'?'p':(o.mode==='前台结'?'b':'d'))+'">'+o.mode+'</span></td>'+
+      '<td>'+chTag+'</td><td class="hint">'+o.src+'</td>'+
+      '<td><span class="tag '+o.stc+'">'+o.st+'</span></td><td class="mono">'+o.tm+'</td>'+
+      '<td><div class="ops"><button class="btn sm txt" onclick="openM(\'mOrder\')">详情</button>'+
+      (o.st==='未结账'?'<button class="btn sm pri" onclick="go(\'tables\')">结账</button>':
+       o.st==='需人工处理'?'<button class="btn sm dan" onclick="openM(\'mManual\')">处理</button>':
+       '<button class="btn sm txt" onclick="tst(\'b\',\'已重打小票\')">重打</button>')+'</div></td></tr>';
+  }).join('');
+}
+
+/* ===== KDS ===== */
+var KDS=[
+ {id:'0093',t:'A03',col:1,min:1,mode:'先付',ch:'微信',items:[
+   {n:'宫保鸡丁',q:2,s:'不要花生'},{n:'蒜蓉油麦菜',q:1},{n:'米饭',q:3}]},
+ {id:'0094',t:'C01',col:1,min:2,mode:'先付',ch:'支付宝',items:[
+   {n:'水煮牛肉',q:1,s:'大份 / 微辣'},{n:'酸辣土豆丝',q:1},{n:'紫菜蛋花汤',q:1}]},
+ {id:'0095',t:'B03',col:1,min:0,mode:'后付',ch:'挂账',add:1,items:[
+   {n:'麻婆豆腐',q:2,s:'加辣'},{n:'米饭',q:4}]},
+ {id:'0091',t:'A05',col:2,min:7,mode:'先付',ch:'现金',items:[
+   {n:'宫保鸡丁',q:1},{n:'蒜蓉油麦菜',q:2},{n:'米饭',q:5}]},
+ {id:'0090',t:'B05',col:2,min:16,urg:1,mode:'后付',ch:'挂账',items:[
+   {n:'水煮牛肉',q:2,s:'大份'},{n:'口水鸡',q:1,r:'已沽清，需退菜'},{n:'米饭',q:6}]},
+ {id:'0088',t:'A02',col:3,min:12,mode:'先付',ch:'现金',items:[
+   {n:'酸辣土豆丝',q:1,sv:1},{n:'米饭',q:2,sv:1}]},
+ {id:'0087',t:'C02',col:3,min:9,mode:'先付',ch:'支付宝',items:[
+   {n:'麻婆豆腐',q:1,sv:1},{n:'紫菜蛋花汤',q:2,sv:1}]},
+ {id:'0092',t:'B02',col:4,min:84,mode:'后付',ch:'挂账 ¥1286',items:[
+   {n:'宫保鸡丁',q:2,sv:1},{n:'水煮牛肉',q:1,sv:1},{n:'麻婆豆腐',q:1,sv:1},{n:'米饭',q:8,sv:1}]},
+ {id:'0096',t:'C03',col:4,min:5,mode:'前台结',ch:'挂账 ¥88',items:[{n:'宫保鸡丁',q:1},{n:'米饭',q:2,sv:1}]}
+];
+function tmCls(m){return m>=15?'d':m>=10?'w':''}
+function renderKds(){
+  for(var c=1;c<=4;c++){
+    var list=KDS.filter(function(k){return k.col===c});
+    var box=document.getElementById('kl'+c);if(!box)continue;
+    document.getElementById('kc'+c).textContent=list.length;
+    if(!list.length){
+      var msg={1:'暂无新单',2:'无备餐中订单',3:'今日已出餐 84 单',4:'无挂账桌台'}[c];
+      box.innerHTML='<div class="k-empty"><u>'+({1:'◉',2:'◐',3:'✓',4:'⏱'}[c])+'</u>'+msg+'</div>';continue;
+    }
+    box.innerHTML=list.map(function(k){
+      var cls=c===1?'new':c===2?'mk':c===3?'dn':'wt';
+      if(k.urg)cls='urg';
+      var items=k.items.map(function(i){
+        return '<div class="ki'+(i.sv?' sv':'')+'"><b'+(i.q>1?' class="m"':'')+'>'+i.q+'</b>'+
+          '<div class="ki-n">'+i.n+
+          (i.s?'<span class="ki-s">→ '+i.s+'</span>':'')+
+          (i.r?'<span class="ki-r">⚠ '+i.r+'</span>':'')+'</div></div>';
+      }).join('');
+      var btns=c===1?'<button class="kbt p" onclick="kMove(\''+k.id+'\',2)">接单备餐</button>':
+        c===2?'<button class="kbt g" onclick="kMove(\''+k.id+'\',3)">全部出餐</button><button class="kbt r" onclick="tst(\'o\',\'已通知收银退菜\')">退菜</button>':
+        c===3?'<button class="kbt o" onclick="kMove(\''+k.id+'\',2)">撤回</button>':
+        '<button class="kbt o" onclick="closeKds();go(\'tables\')">去结账</button>';
+      var mtag=k.add?'<span class="k-mini w">加菜</span>':'';
+      return '<div class="kc '+cls+'">'+
+        '<div class="kc-h"><span class="kc-t">'+k.t+'</span>'+mtag+
+        '<span class="k-mini">'+k.mode+'</span>'+
+        '<div class="kc-r"><div class="kc-tm '+tmCls(k.min)+'">'+k.min+':0'+(k.id.slice(-1))+'</div><small>等待时长</small></div></div>'+
+        '<div class="kc-b">'+items+'</div>'+
+        '<div class="kc-f"><span class="kt2"><span class="kc-n">#'+k.id+'</span>· '+k.ch+'</span>'+btns+'</div></div>';
+    }).join('');
+  }
+}
+function kMove(id,col){
+  var k=KDS.filter(function(x){return x.id===id})[0];if(!k)return;
+  var old=k.col;k.col=col;
+  if(col===2){k.min=0;delete k.urg;tst('g',k.t+' 已接单，开始备餐');}
+  else if(col===3){k.items.forEach(function(i){i.sv=1});tst('g',k.t+' 已出餐'+(k.mode==='后付'?'，挂账待结账':''));
+    if(k.mode==='后付'){setTimeout(function(){k.col=4;renderKds()},1200);}}
+  else if(col===2&&old===3){tst('o',k.t+' 已撤回备餐');}
+  renderKds();
+}
+function openKds(){document.getElementById('kds').classList.add('on');renderKds();}
+function closeKds(){document.getElementById('kds').classList.remove('on');
+  if(ROLE.role==='kitchen'){tst('b','后厨角色仅可使用 KDS 大屏');setTimeout(openKds,200);return;}
+  document.querySelectorAll('.mi').forEach(function(m){m.classList.toggle('on',m.dataset.p==='dash')});
+  go('dash');}
+setInterval(function(){
+  var el=document.getElementById('kdsClock');
+  if(el){var d=new Date();el.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);}
+},1000);
+/* 模拟新单推送 */
+setInterval(function(){
+  if(!document.getElementById('kds').classList.contains('on'))return;
+  KDS.forEach(function(k){if(k.col===1||k.col===2)k.min++});
+  renderKds();
+},20000);
+
+/* ===== 代客点单 ===== */
+var CATS=[
+ {n:'热菜',c:5},{n:'凉菜',c:3},{n:'汤羹',c:2},{n:'主食',c:3},{n:'饮品',c:3}];
+var DISHES={
+ '热菜':[{n:'宫保鸡丁',p:48},{n:'水煮牛肉',p:68,s:'小份/大份'},{n:'麻婆豆腐',p:32,s:'可加辣'},
+   {n:'蒜蓉油麦菜',p:26},{n:'酸辣土豆丝',p:22}],
+ '凉菜':[{n:'口水鸡',p:38,out:1},{n:'拍黄瓜',p:16},{n:'夫妻肺片',p:42}],
+ '汤羹':[{n:'紫菜蛋花汤',p:18},{n:'酸辣汤',p:24}],
+ '主食':[{n:'米饭',p:3},{n:'炒饭',p:22},{n:'手工面',p:18}],
+ '饮品':[{n:'鲜榨橙汁',p:18},{n:'柠檬水',p:12},{n:'冰镇酸梅汤',p:14}]
+};
+var CART=[],curCat='热菜';
+function renderPos(){
+  var cb=document.getElementById('posCat');if(!cb)return;
+  cb.innerHTML=CATS.map(function(c){
+    return '<div class="'+(c.n===curCat?'on':'')+'" onclick="switchCat(\''+c.n+'\')">'+c.n+
+      '<small>'+c.c+' 个菜品</small></div>';
+  }).join('');
+  document.getElementById('posDish').innerHTML=(DISHES[curCat]||[]).map(function(d){
+    var q=0;CART.forEach(function(c){if(c.n===d.n)q+=c.q});
+    return '<div class="dish'+(d.out?' out':'')+'" onclick="'+(d.out?'tst(\'r\',\''+d.n+' 已沽清，无法点单\')':'addCart(\''+d.n+'\','+d.p+')')+'">'+
+      (q?'<span class="qb">'+q+'</span>':'')+
+      '<div class="dish-n">'+d.n+'</div><div class="dish-p"><small>¥</small>'+d.p.toFixed(2)+'</div>'+
+      (d.s?'<div class="dish-x">'+d.s+'</div>':'')+'</div>';
+  }).join('');
+}
+function switchCat(n){curCat=n;renderPos();}
+function addCart(n,p){
+  var f=CART.filter(function(c){return c.n===n})[0];
+  if(f)f.q++;else CART.push({n:n,p:p,q:1});
+  renderCart();renderPos();
+}
+function chQ(n,d){
+  var f=CART.filter(function(c){return c.n===n})[0];if(!f)return;
+  f.q+=d;if(f.q<=0)CART=CART.filter(function(c){return c.n!==n});
+  renderCart();renderPos();
+}
+function clearCart(){CART=[];renderCart();renderPos();tst('o','已清空已选菜品');}
+function renderCart(){
+  var box=document.getElementById('cartBox');if(!box)return;
+  if(!CART.length){
+    box.innerHTML='<div class="empty" style="padding:40px 12px"><u>☰</u><p>点击左侧菜品加入</p></div>';
+  }else{
+    box.innerHTML=CART.map(function(c){
+      return '<div class="ct-i"><div class="ct-n">'+c.n+'<small>¥'+c.p.toFixed(2)+' / 份</small></div>'+
+        '<div class="stp"><b onclick="chQ(\''+c.n+'\',-1)">−</b><span>'+c.q+'</span><b onclick="chQ(\''+c.n+'\',1)">+</b></div>'+
+        '<div class="ct-p">¥'+(c.p*c.q).toFixed(2)+'</div></div>';
+    }).join('');
+  }
+  var sub=CART.reduce(function(s,c){return s+c.p*c.q},0);
+  var cnt=CART.reduce(function(s,c){return s+c.q},0);
+  document.getElementById('cSub').textContent='¥'+sub.toFixed(2);
+  document.getElementById('cTot').textContent='¥'+(sub+8).toFixed(2);
+  document.getElementById('cartCnt').textContent=cnt+' 项';
+}
+function submitPos(){
+  if(!CART.length){tst('r','请先选择菜品');return;}
+  var sel=document.getElementById('posTable').value,post=sel.indexOf('后付')>-1;
+  var amt=CART.reduce(function(s,c){return s+c.p*c.q},0)+8;
+  tst('g','已提交并推送后厨，'+(post?'账单挂到桌台会话（后付）':'请收款 ¥'+amt.toFixed(2)));
+  CART=[];renderCart();renderPos();
+  setTimeout(function(){tst('b','后厨已接单，KDS 新单列出现该桌')},1000);
+}
+
+/* ===== 初始化 ===== */
+function renderAll(){renderTables();renderOrders();renderPos();renderCart();}
+renderAll();
+</script>
+</body>
+</html>

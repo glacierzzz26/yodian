@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>悦点 · 顾客端 v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --brand:#FF5A1F;--brand2:#FF8A3D;--brand-soft:rgba(255,90,31,.12);
+  --ok:#00B578;--warn:#FF8C1A;--danger:#FF3B30;--info:#1677FF;
+  --bg:#F5F6F8;--card:#FFFFFF;--t1:#1A1A1A;--t2:#666;--t3:#999;
+  --bd:#EEE;--bd2:#F2F2F2;--input:#F5F6F8;--shadow:0 2px 12px rgba(0,0,0,.06);
+  --shadow2:0 1px 4px rgba(0,0,0,.06);--radius:14px;
+  --er-bg:rgba(255,59,48,.08);--ok-bg:rgba(0,181,120,.1);
+}
+html[data-theme=dark]{
+  --brand:#FF6A35;--brand2:#FF9450;--brand-soft:rgba(255,106,53,.16);
+  --bg:#121316;--card:#1E2024;--t1:#F0F0F0;--t2:#A8ABB0;--t3:#6E717A;
+  --bd:#2A2D33;--bd2:#232529;--input:#1A1C20;--shadow:0 2px 12px rgba(0,0,0,.4);
+  --shadow2:0 1px 4px rgba(0,0,0,.3);--er-bg:rgba(255,59,48,.16);--ok-bg:rgba(0,181,120,.16);
+}
+html,body{height:100%;background:#000;font-size:14px}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:10px}
+.phone{width:390px;max-width:100%;height:820px;max-height:calc(100vh - 20px);background:var(--bg);border-radius:46px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;border:10px solid #1A1A1A}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+/* 状态栏 */
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg);flex:0 0 auto}
+.statusbar .ic i{font-style:normal;margin-left:4px}
+/* 导航栏 */
+.navbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:var(--bg);flex:0 0 auto;position:relative}
+.navbar .bk{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--t1);cursor:pointer;font-weight:300}
+.navbar .ttl{font-size:17px;font-weight:700;color:var(--t1)}
+.navbar .rt{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+/* 内容区 */
+.content{flex:1;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch}
+.content::-webkit-scrollbar{width:0}
+.pg{display:none}.pg.on{display:block}
+/* ===== 启动/引导页 ===== */
+.boot{position:absolute;inset:0;background:linear-gradient(160deg,#FF5A1F,#FF8A3D);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px;text-align:center;z-index:30}
+.boot.hide{opacity:0;transform:scale(1.05);pointer-events:none;transition:.3s}
+.boot .logo{font-size:64px;margin-bottom:8px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.2))}
+.boot .bn{font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:1px}
+.boot .bs{font-size:13px;opacity:.9;margin-bottom:20px}
+.boot .env{font-size:13px;background:rgba(255,255,255,.18);padding:8px 16px;border-radius:20px;margin-bottom:8px;min-height:34px;display:flex;align-items:center}
+.boot .dots{margin:6px 0 16px}
+.boot .dots i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.4;margin:0 2px;animation:dot 1.4s infinite}
+.boot .dots i:nth-child(2){animation-delay:.2s}.boot .dots i:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{opacity:.4;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.chsw{display:flex;gap:10px;margin-top:12px}
+.chsw div{flex:1;padding:10px 0;border-radius:12px;background:rgba(255,255,255,.18);font-size:13px;cursor:pointer;border:1.5px solid transparent;transition:.15s}
+.chsw div.on{background:#fff;color:var(--brand);font-weight:700;border-color:#fff}
+/* 引导步骤卡片（就餐方式/人数/授权） */
+.guide{position:absolute;inset:0;background:var(--bg);z-index:28;display:flex;flex-direction:column;padding:24px 20px;animation:up .25s}
+.guide.hide{display:none}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.guide .g-h{font-size:20px;font-weight:800;color:var(--t1);margin-bottom:6px}
+.guide .g-s{font-size:13px;color:var(--t2);margin-bottom:20px}
+.mode-list{display:flex;flex-direction:column;gap:12px}
+.mode-card{background:var(--card);border:2px solid var(--bd);border-radius:16px;padding:18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.15s}
+.mode-card.on{border-color:var(--brand);background:var(--brand-soft)}
+.mode-card .mc-i{font-size:34px;width:54px;height:54px;border-radius:14px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;flex:0 0 54px}
+.mode-card.on .mc-i{background:var(--brand);color:#fff}
+.mode-card .mc-t{font-size:16px;font-weight:700;color:var(--t1)}
+.mode-card .mc-d{font-size:12px;color:var(--t2);margin-top:3px}
+.mode-card .mc-tag{margin-left:auto;font-size:11px;color:var(--t3);background:var(--input);padding:3px 8px;border-radius:6px}
+/* 人数选择 */
+.pax-box{text-align:center;margin:30px 0}
+.pax-box .pax-num{display:flex;align-items:center;justify-content:center;gap:30px;margin:20px 0}
+.pax-box .pn-b{width:60px;height:60px;border-radius:50%;background:var(--card);border:2px solid var(--bd);font-size:32px;font-weight:700;color:var(--t1);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.pax-box .pn-b:active{transform:scale(.92)}
+.pax-box .pn-v{font-size:56px;font-weight:800;color:var(--brand);min-width:90px}
+.pax-box .pn-u{font-size:14px;color:var(--t2)}
+.pax-quick{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.pax-quick div{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--t1);cursor:pointer}
+.pax-quick div.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+/* 手机号授权 */
+.auth-card{background:var(--card);border-radius:16px;padding:22px 18px;text-align:center;margin-top:20px;box-shadow:var(--shadow)}
+.auth-card .ac-i{font-size:44px;margin-bottom:10px}
+.auth-card .ac-t{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.auth-card .ac-d{font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:18px}
+/* 通用按钮 */
+.btn{padding:12px 16px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
+.btn:active{transform:scale(.97)}
+.btn.brand{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 4px 12px var(--brand-soft)}
+.btn.ghost{background:var(--input);color:var(--t1)}
+.btn.block{width:100%;padding:14px;font-size:15px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.btn-lg{padding:14px;font-size:15px}
+/* ===== 点餐页 ===== */
+.store{padding:14px 16px 10px;background:var(--card)}
+.store .nm{font-size:17px;font-weight:800;color:var(--t1)}
+.store .nm .v{font-size:12px;color:var(--warn);font-weight:600;margin-left:6px}
+.store .meta{display:flex;gap:14px;font-size:12px;color:var(--t2);margin-top:6px;flex-wrap:wrap}
+.store .meta b{color:var(--t1);font-weight:600;cursor:pointer}
+.store .meta b#paxN{color:var(--brand)}
+.store .mode{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;background:var(--brand-soft);color:var(--brand);cursor:pointer}
+.mode-banner{margin:8px 12px;padding:9px 12px;border-radius:10px;background:var(--brand-soft);color:var(--brand);font-size:12px;display:flex;align-items:center;gap:6px}
+.mode-banner.warn{background:var(--er-bg);color:var(--danger)}
+.menu-wrap{display:flex;height:calc(100% - 0px)}
+.cat-col{width:84px;flex:0 0 84px;background:var(--bg);overflow-y:auto;border-right:1px solid var(--bd2)}
+.cat-col div{padding:14px 6px;text-align:center;font-size:12px;color:var(--t2);cursor:pointer;position:relative;border-left:3px solid transparent;line-height:1.3}
+.cat-col div.on{background:var(--card);color:var(--brand);font-weight:700;border-left-color:var(--brand)}
+.cat-col div .cb{position:absolute;top:4px;right:4px;background:var(--brand);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.dish-col{flex:1;overflow-y:auto;padding:10px 12px 120px;background:var(--card)}
+.cat-h{font-size:14px;font-weight:700;color:var(--t1);margin:6px 0 10px;display:flex;align-items:center;gap:6px}
+.cat-h .muted{font-size:11px;color:var(--t3);font-weight:400}
+.dish{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd2)}
+.dish .pic{width:74px;height:74px;border-radius:12px;flex:0 0 74px;display:flex;align-items:center;justify-content:center;font-size:34px;position:relative}
+.dish .pic .sold{position:absolute;top:-4px;left:-4px;font-size:10px;color:#fff;padding:2px 6px;border-radius:6px;font-weight:600}
+.dish .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.dish .dn{font-size:14px;font-weight:700;color:var(--t1)}
+.dish .dn .tag{font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;margin-left:4px;background:var(--brand-soft);color:var(--brand)}
+.dish .ds{font-size:11px;color:var(--t3);margin-top:2px}
+.dish .sale{font-size:11px;color:var(--t3)}
+.dish .bot{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.dish .price{font-size:16px;font-weight:800;color:var(--danger)}
+.dish .price .u{font-size:11px;font-weight:600}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper .mi,.stepper .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;font-weight:700}
+.stepper .mi{background:var(--card);border:1px solid var(--bd);color:var(--t2);visibility:hidden}
+.stepper.has .mi{visibility:visible}
+.stepper .pl{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 3px 8px var(--brand-soft)}
+.stepper .qn{min-width:16px;text-align:center;font-size:14px;font-weight:700;color:var(--t1);visibility:hidden}
+.stepper.has .qn{visibility:visible}
+/* ===== 购物车浮层 ===== */
+.cartbar{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:0 10px 12px}
+.cartbar.up{transform:translateY(-220px)}
+.cart-main{height:56px;background:#2B2E36;color:#fff;border-radius:28px;display:flex;align-items:center;padding:0 8px 0 14px;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.cart-ic{position:relative;width:50px;height:50px;margin-top:-14px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 12px var(--brand-soft);cursor:pointer}
+.cart-ic.empty{background:#4A4D55}
+.cart-ic .cnt{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:700}
+.cart-mid{flex:1;min-width:0}
+.cart-mid .ct{font-size:16px;font-weight:800}
+.cart-mid .ct.zero{color:#B9BCC4;font-weight:600;font-size:14px}
+.cart-mid .cs{font-size:11px;opacity:.8}
+.cart-go{height:42px;padding:0 20px;border-radius:21px;background:#fff;color:#2B2E36;font-weight:800;font-size:15px;border:none;cursor:pointer}
+.cart-go:disabled{background:#565A63;color:#B9BCC4}
+.cart-mask{position:absolute;inset:0;z-index:23;display:none}
+.cart-mask.show{display:block}
+.cart-panel{position:absolute;left:0;right:0;bottom:68px;background:var(--card);border-radius:18px 18px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.12);transform:translateY(120%);transition:.25s;z-index:24;max-height:280px;overflow:hidden;display:flex;flex-direction:column}
+.cart-panel.show{transform:translateY(0)}
+.cart-panel .ch{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bd)}
+.cart-panel .ch .cl{cursor:pointer;color:var(--t2);font-size:12px}
+.cart-panel .clist{overflow-y:auto;flex:1;padding:4px 16px}
+.cart-panel .citem{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd2)}
+.cart-panel .citem .cn{flex:1;font-size:14px;color:var(--t1);font-weight:600}
+.cart-panel .citem .cp{color:var(--brand);font-weight:700;font-size:13px;width:60px;text-align:right}
+/* ===== 结算抽屉 ===== */
+.sheet{position:absolute;inset:0;z-index:50;display:none}
+.sheet.show{display:block}
+.sheet .mask{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.sheet .pan{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;padding:18px 16px 24px;max-height:86%;overflow-y:auto;animation:up .25s ease}
+.sheet .ph{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.sheet .ph .x{font-size:18px;color:var(--t2);cursor:pointer}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bd2);font-size:14px;color:var(--t1)}
+.row .l{color:var(--t2)}
+.payopt{display:flex;align-items:center;gap:12px;padding:13px 12px;border:1.5px solid var(--bd);border-radius:12px;margin-bottom:10px;cursor:pointer}
+.payopt.on{border-color:var(--brand);background:var(--brand-soft)}
+.payopt .pi{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;color:#fff}
+.payopt .pn{flex:1;font-size:14px;font-weight:600;color:var(--t1)}
+.payopt .ck{width:20px;height:20px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.payopt.on .ck{background:var(--brand);border-color:var(--brand)}
+.total-bar{display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px}
+.total-bar .tl{font-size:13px;color:var(--t2)}
+.total-bar .tv{font-size:24px;font-weight:800;color:var(--brand)}
+/* 按人收费项 */
+.perhead{margin:4px 0 2px;background:var(--bg);border-radius:12px;padding:10px 12px}
+.perhead .ph-h{font-size:12px;color:var(--t2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.perhead .ph-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd2);cursor:pointer}
+.perhead .ph-row:last-child{border:none}
+.perhead .ph-row .pe{font-size:20px}
+.perhead .ph-row .pn{flex:1}
+.perhead .ph-row .pn b{font-size:14px;color:var(--t1)}
+.perhead .ph-row .pn small{color:var(--t3);margin-left:6px;font-size:11px}
+.perhead .ph-row .pp{color:var(--brand);font-weight:700;font-size:13px;margin-right:4px}
+.perhead .ph-row .ck{width:22px;height:22px;border-radius:7px;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+.perhead .ph-row .ck.on{background:var(--brand);border-color:var(--brand)}
+.perhead .ph-row.req .ck{background:var(--ok);border-color:var(--ok);cursor:not-allowed}
+.perhead .per-sum{display:flex;justify-content:space-between;padding:8px 0 2px;font-size:12px;color:var(--t2)}
+/* 支付成功 */
+.payok{position:absolute;inset:0;background:var(--card);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.payok.show{display:flex}
+.payok .ring{width:96px;height:96px;border-radius:50%;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;font-size:52px;color:var(--ok);animation:pop .4s}
+@keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.payok .pt{font-size:18px;font-weight:800;color:var(--t1)}
+.payok .ps{font-size:13px;color:var(--t2)}
+/* ===== 订单时间线 ===== */
+.tl{padding:8px 4px}
+.tl .step{display:flex;gap:12px;position:relative;padding-bottom:20px}
+.tl .step:last-child{padding-bottom:0}
+.tl .dot{width:22px;height:22px;border-radius:50%;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--input);color:var(--t3);z-index:2}
+.tl .step.done .dot{background:var(--ok);color:#fff}
+.tl .step.cur .dot{background:var(--brand);color:#fff;box-shadow:0 0 0 4px var(--brand-soft)}
+.tl .step::before{content:"";position:absolute;left:10px;top:22px;bottom:0;width:2px;background:var(--bd)}
+.tl .step:last-child::before{display:none}
+.tl .step.done::before{background:var(--ok)}
+.tl .tx .th{font-size:14px;font-weight:600;color:var(--t1)}
+.tl .step.cur .tx .th{color:var(--brand)}
+.tl .tx .td{font-size:11px;color:var(--t3);margin-top:2px}
+.ocard{background:var(--card);border-radius:var(--radius);padding:14px;margin:12px;box-shadow:var(--shadow2)}
+.ocard .oh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ocard .oh .no{font-size:13px;color:var(--t2);font-weight:600}
+.ost{font-size:12px;font-weight:700;padding:2px 9px;border-radius:7px}
+.ost.a{background:var(--brand-soft);color:var(--brand)}
+.ost.b{background:rgba(22,119,255,.12);color:var(--info)}
+.ocard .li{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--t1)}
+.ocard .li .q{color:var(--t3);margin:0 8px}
+.ocard .of{display:flex;gap:8px;margin-top:12px}
+.ocard .of .btn{flex:1;padding:9px 0;font-size:13px}
+/* ===== 个人中心 ===== */
+.uc-head{padding:26px 18px 18px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;display:flex;align-items:center;gap:14px}
+.uc-av{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}
+.uc-head .un{font-size:18px;font-weight:800}
+.uc-head .us{font-size:12px;opacity:.9;margin-top:3px}
+.uc-stats{display:flex;background:var(--card);margin:-14px 14px 0;border-radius:14px;box-shadow:var(--shadow2);position:relative;z-index:2}
+.uc-stats div{flex:1;text-align:center;padding:14px 0}
+.uc-stats .v{font-size:18px;font-weight:800;color:var(--brand)}
+.uc-stats .k{font-size:11px;color:var(--t2);margin-top:3px}
+.uc-list{margin:14px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow2)}
+.uc-item{display:flex;align-items:center;gap:12px;padding:14px 14px;border-bottom:1px solid var(--bd2);font-size:14px;color:var(--t1);cursor:pointer}
+.uc-item:last-child{border-bottom:none}
+.uc-item .ui{font-size:18px;width:24px;text-align:center}
+.uc-item .arr{margin-left:auto;color:var(--t3);font-size:14px}
+.uc-item .tag2{margin-left:auto;font-size:11px;color:var(--t3);background:var(--input);padding:3px 8px;border-radius:6px}
+/* 评价 */
+.stars{display:flex;gap:8px;justify-content:center;margin:10px 0 4px}
+.stars span{font-size:34px;color:var(--bd);cursor:pointer;transition:.1s}
+.stars span.on{color:#FFB400}
+.area{width:100%;border:1px solid var(--bd);background:var(--input);border-radius:10px;padding:10px;font-size:13px;color:var(--t1);resize:none;font-family:inherit;min-height:62px}
+.area:focus{outline:none;border-color:var(--brand)}
+.chip{display:inline-flex;padding:6px 12px;border-radius:18px;background:var(--input);color:var(--t2);font-size:12px;margin:4px;cursor:pointer}
+.chip.on{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.toast{position:absolute;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 18px;border-radius:22px;z-index:99;opacity:0;transition:.25s;white-space:nowrap;max-width:88%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.mini-banner{margin:12px;padding:10px 12px;border-radius:12px;background:rgba(22,119,255,.1);color:var(--info);font-size:12px;display:flex;gap:8px;align-items:center}
+.mini-banner.o{background:rgba(255,143,31,.12);color:var(--warn)}
+.empty-p{text-align:center;color:var(--t3);padding:60px 20px;font-size:13px}
+.empty-p .e{font-size:46px;opacity:.5;margin-bottom:10px}
+/* 选人数浮层(重选) */
+.pax-sheet .pan{padding:20px 16px 24px}
+.pax-sheet .pax-num{display:flex;align-items:center;justify-content:center;gap:24px;margin:14px 0 18px}
+.pax-sheet .pn-b{width:52px;height:52px;border-radius:50%;background:var(--input);border:1px solid var(--bd);font-size:28px;font-weight:700;color:var(--t1);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pax-sheet .pn-v{font-size:42px;font-weight:800;color:var(--brand);min-width:72px;text-align:center}</style>
+</head>
+<body>
+<div class="phone">
+  <div class="scr">
+    <div class="statusbar"><span id="clk">21:48</span><span class="ic"><i>📶</i><i>🔋</i></span></div>
+    <div class="navbar">
+      <div class="bk" id="navBk" onclick="navBack()" style="visibility:hidden">‹</div>
+      <div class="ttl" id="navTtl">点餐</div>
+      <div class="rt" id="navTheme" onclick="toggleTheme()">☀</div>
+    </div>
+    <div class="content" id="content">
+<!-- ===== 启动识别页 ===== -->
+<div class="boot" id="boot">
+  <div class="logo">🍜</div>
+  <div class="bn">老街坊 · 川味小馆</div>
+  <div class="bs">桌台 A01 · 扫码点餐</div>
+  <div class="env" id="envBox"><span id="envTxt">⚡ 正在识别打开环境…</span></div>
+  <div class="dots" id="envDots"><i></i><i></i><i></i></div>
+  <div class="chsw" id="chsw" style="opacity:.4">
+    <div id="chWx" class="on" onclick="pickCh('wx')">💚 微信</div>
+    <div id="chAli" onclick="pickCh('ali')">🔵 支付宝</div>
+  </div>
+  <button class="btn block brand" style="margin-top:18px;background:#fff;color:var(--brand);font-size:16px" onclick="goMode()">进入点餐</button>
+  <div style="margin-top:14px;font-size:11px;opacity:.7">一码双扫 · 微信/支付宝自动识别</div>
+</div>
+
+<!-- ===== 引导：就餐方式 ===== -->
+<div class="guide hide" id="gMode">
+  <div class="g-h">选择就餐方式</div>
+  <div class="g-s">不同方式影响出餐与结账流程</div>
+  <div class="mode-list">
+    <div class="mode-card on" data-m="dine_in" onclick="pickMode(this,'dine_in')">
+      <div class="mc-i">🍽️</div>
+      <div><div class="mc-t">堂食</div><div class="mc-d">扫码入桌，服务员送餐到桌</div></div>
+    </div>
+    <div class="mode-card" data-m="takeaway" onclick="pickMode(this,'takeaway')">
+      <div class="mc-i">🥡</div>
+      <div><div class="mc-t">外带</div><div class="mc-d">自取带走，不占用桌台</div></div>
+      <div class="mc-tag">Phase 2</div>
+    </div>
+    <div class="mode-card" data-m="pickup" onclick="pickMode(this,'pickup')">
+      <div class="mc-i">🛍️</div>
+      <div><div class="mc-t">自提</div><div class="mc-d">到店取餐号叫号</div></div>
+      <div class="mc-tag">Phase 2</div>
+    </div>
+  </div>
+  <div style="flex:1"></div>
+  <button class="btn block brand btn-lg" onclick="goPax()">下一步 · 选就餐人数</button>
+</div>
+
+<!-- ===== 引导：选就餐人数 ===== -->
+<div class="guide hide" id="gPax">
+  <div class="g-h">就餐人数</div>
+  <div class="g-s">用于按人收费项（餐位费/餐具/餐巾纸等）自动核算</div>
+  <div class="pax-box">
+    <div class="pax-num">
+      <div class="pn-b" onclick="setPax(-1)">−</div>
+      <div><div class="pn-v" id="paxVal">2</div><div class="pn-u">人</div></div>
+      <div class="pn-b" onclick="setPax(1)">+</div>
+    </div>
+    <div class="pax-quick" id="paxQuick">
+      <div onclick="setPaxVal(1)">1</div><div class="on" onclick="setPaxVal(2)">2</div>
+      <div onclick="setPaxVal(3)">3</div><div onclick="setPaxVal(4)">4</div>
+      <div onclick="setPaxVal(5)">5</div><div onclick="setPaxVal(6)">6</div>
+      <div onclick="setPaxVal(8)">8</div><div onclick="setPaxVal(10)">10</div>
+    </div>
+  </div>
+  <div style="flex:1"></div>
+  <button class="btn block brand btn-lg" onclick="goAuth()">下一步</button>
+</div>
+
+<!-- ===== 引导：手机号授权（可选） ===== -->
+<div class="guide hide" id="gAuth">
+  <div class="g-h">登录会员</div>
+  <div class="g-s">授权手机号可享会员价（二期）与历史订单</div>
+  <div class="auth-card">
+    <div class="ac-i">📱</div>
+    <div class="ac-t">一键授权手机号</div>
+    <div class="ac-d">仅用于会员身份与订单服务，不主动推送营销。<br>未授权也可正常点餐。</div>
+    <button class="btn block brand" style="margin-bottom:10px" onclick="doAuth(true)">授权手机号</button>
+    <button class="btn block ghost" onclick="doAuth(false)">跳过，直接点餐</button>
+  </div>
+</div>
+<!-- ===== 点餐页 ===== -->
+<div class="pg on" id="p_menu">
+  <div class="store">
+    <div class="nm">老街坊 · 川味小馆 <span class="v">★ 4.8</span></div>
+    <div class="meta">
+      <span>📍 桌台 <b id="tblNo">A01</b></span>
+      <span>👥 <b id="paxN" onclick="openPaxSheet()">2</b> 人</span>
+      <span>⏱ 营业中 10:00-22:00</span>
+    </div>
+    <div class="mode" id="modeTag" onclick="openPaxSheet()">先付模式</div>
+  </div>
+  <div class="mode-banner" id="modeTip">💡 先付后吃：下单即支付，后厨立即备餐</div>
+  <div class="menu-wrap">
+    <div class="cat-col" id="catCol"></div>
+    <div class="dish-col" id="dishCol"></div>
+  </div>
+</div>
+<!-- ===== 订单页 ===== -->
+<div class="pg" id="p_order"><div id="orderBody"></div></div>
+<!-- ===== 我的页 ===== -->
+<div class="pg" id="p_me">
+  <div class="uc-head">
+    <div class="uc-av">客</div>
+    <div><div class="un" id="meName">微信用户</div><div class="us" id="meSub">点击登录享会员价</div></div>
+  </div>
+  <div class="uc-stats">
+    <div><div class="v" id="stAmt">¥0</div><div class="k">本次消费</div></div>
+    <div><div class="v">12</div><div class="k">历史订单</div></div>
+    <div><div class="v">4.8</div><div class="k">店铺评分</div></div>
+  </div>
+  <div class="uc-list">
+    <div class="uc-item" onclick="tst('二期功能')"><span class="ui">🎟️</span>优惠券<span class="tag2">二期</span></div>
+    <div class="uc-item" onclick="tst('二期功能')"><span class="ui">💳</span>储值余额<span class="tag2">二期</span></div>
+    <div class="uc-item" onclick="tst('二期功能')"><span class="ui">🧾</span>电子发票<span class="tag2">二期</span></div>
+    <div class="uc-item" onclick="switchTab('order')"><span class="ui">📋</span>我的订单<span class="arr">›</span></div>
+    <div class="uc-item" onclick="callWaiter('call')"><span class="ui">🙋</span>呼叫服务员<span class="arr">›</span></div>
+  </div>
+</div>
+<!-- ===== 评价页 ===== -->
+<div class="pg" id="p_review">
+  <div style="padding:18px 16px">
+    <div style="text-align:center;font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px">为本次用餐打分</div>
+    <div style="text-align:center;font-size:12px;color:var(--t2);margin-bottom:14px">老街坊 · 川味小馆 · 桌台 A01</div>
+    <div class="stars" id="stars">
+      <span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span>
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--t2);margin-bottom:14px" id="rateTxt">请点亮星星</div>
+    <div style="text-align:center;margin-bottom:10px">
+      <span class="chip" onclick="tglChip(this)">上菜快</span><span class="chip" onclick="tglChip(this)">味道好</span>
+      <span class="chip" onclick="tglChip(this)">分量足</span><span class="chip" onclick="tglChip(this)">服务好</span>
+      <span class="chip" onclick="tglChip(this)">环境棒</span><span class="chip" onclick="tglChip(this)">性价比高</span>
+    </div>
+    <textarea class="area" id="reviewTxt" placeholder="说说哪里好、哪里能改进…"></textarea>
+    <button class="btn block brand btn-lg" style="margin-top:16px" onclick="submitReview()">提交评价</button>
+  </div>
+</div>
+    </div>
+<!-- ===== 购物车浮层 ===== -->
+<div class="cart-mask" id="cartMask" onclick="toggleCart()"></div>
+<div class="cart-panel" id="cartPanel">
+  <div class="ch"><span style="font-weight:700">已选菜品</span><span class="cl" onclick="clearCart()">🗑 清空</span></div>
+  <div class="clist" id="cartList"></div>
+</div>
+<div class="cartbar" id="cartbar" style="display:none">
+  <div class="cart-main">
+    <div class="cart-ic empty" id="cartIc" onclick="toggleCart()">🛒<span class="cnt" id="cartCnt" style="display:none">0</span></div>
+    <div class="cart-mid"><div class="ct zero" id="cartTotal">未选购</div><div class="cs" id="cartSub">先选几道菜吧</div></div>
+    <button class="cart-go" id="cartGo" disabled onclick="openCheckout()">去结算</button>
+  </div>
+</div>
+<!-- ===== 结算/支付 抽屉 ===== -->
+<div class="sheet" id="sheet">
+  <div class="mask" onclick="closeSheet()"></div>
+  <div class="pan" id="sheetPan">
+    <div class="ph"><span id="sheetTtl">确认订单</span><span class="x" onclick="closeSheet()">✕</span></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+<div class="payok" id="payok">
+  <div class="ring">✓</div>
+  <div class="pt" id="payokTtl">支付成功</div>
+  <div class="ps" id="payokSub">已通知后厨</div>
+  <button class="btn brand" style="margin-top:10px;padding:12px 36px" onclick="afterPay()">查看订单</button>
+</div>
+<!-- ===== 选人数重选浮层 ===== -->
+<div class="sheet pax-sheet" id="paxSheet">
+  <div class="mask" onclick="closePaxSheet()"></div>
+  <div class="pan">
+    <div class="ph"><span>修改就餐人数</span><span class="x" onclick="closePaxSheet()">✕</span></div>
+    <div class="pax-num">
+      <div class="pn-b" onclick="setPax(-1)">−</div>
+      <div class="pn-v" id="paxVal2">2</div>
+      <div class="pn-b" onclick="setPax(1)">+</div>
+    </div>
+    <button class="btn block brand btn-lg" onclick="confirmPaxSheet()">确认</button>
+  </div>
+</div>
+    <div class="tabbar" id="tabbar" style="display:none">
+      <div class="tb on" data-t="menu" onclick="switchTab('menu')">🍽 点餐</div>
+      <div class="tb" data-t="order" onclick="switchTab('order')">📋 订单</div>
+      <div class="tb" data-t="me" onclick="switchTab('me')">👤 我的</div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+<script>/* ===== 数据 ===== */
+var STORE={name:'老街坊 · 川味小馆',tbl:'A01',pax:2,mode:'pre',orderType:'dine_in'};
+var CHANNEL='wx';
+var CATS=[
+  {id:'hot',name:'招牌热菜'},{id:'cold',name:'凉菜'},{id:'soup',name:'汤羹'},
+  {id:'stap',name:'主食'},{id:'drink',name:'酒水饮料'},{id:'des',name:'甜点'}
+];
+var DISHES=[
+  {id:1,cat:'hot',name:'麻婆豆腐',price:22,desc:'嫩豆腐·麻辣鲜香',emoji:'🌶️',tag:'招牌',sold:328,color:'#E8543F'},
+  {id:2,cat:'hot',name:'水煮牛肉',price:58,desc:'麻辣鲜香·牛里脊',emoji:'🥩',tag:'招牌',sold:256,color:'#C0392B'},
+  {id:3,cat:'hot',name:'宫保鸡丁',price:38,desc:'鸡丁花生·微辣',emoji:'🍗',tag:'',sold:198,color:'#D98324'},
+  {id:4,cat:'hot',name:'鱼香肉丝',price:32,desc:'酸甜微辣·下饭',emoji:'🥢',tag:'',sold:174,color:'#B5651D'},
+  {id:5,cat:'cold',name:'夫妻肺片',price:36,desc:'麻辣鲜香·凉菜',emoji:'🥗',tag:'',sold:142,color:'#7B4B94'},
+  {id:6,cat:'cold',name:'口水鸡',price:34,desc:'红油浇淋·嫩鸡',emoji:'🐔',tag:'',sold:121,color:'#A0522D'},
+  {id:7,cat:'cold',name:'拍黄瓜',price:12,desc:'蒜香清爽',emoji:'🥒',tag:'',sold:289,color:'#5B8C3E'},
+  {id:8,cat:'soup',name:'番茄蛋汤',price:16,desc:'家常暖胃',emoji:'🍲',tag:'',sold:99,color:'#E2725B'},
+  {id:9,cat:'soup',name:'酸辣汤',price:18,desc:'开胃醒神',emoji:'🥣',tag:'',sold:88,color:'#C0573B'},
+  {id:10,cat:'stap',name:'米饭',price:2,desc:'东北珍珠米',emoji:'🍚',tag:'',sold:1200,color:'#D9C7A3'},
+  {id:11,cat:'stap',name:'蛋炒饭',price:18,desc:'粒粒分明',emoji:'🍳',tag:'',sold:210,color:'#E0B050'},
+  {id:12,cat:'stap',name:'担担面',price:20,desc:'芝麻酱香·微辣',emoji:'🍜',tag:'招牌',sold:167,color:'#C98A2B'},
+  {id:13,cat:'drink',name:'冰镇酸梅汤',price:8,desc:'解腻生津',emoji:'🥤',tag:'',sold:540,color:'#8E44AD'},
+  {id:14,cat:'drink',name:'鲜榨橙汁',price:15,desc:'无添加',emoji:'🍊',tag:'',sold:233,color:'#E67E22'},
+  {id:15,cat:'drink',name:'王老吉',price:6,desc:'凉茶',emoji:'🥫',tag:'',sold:312,color:'#2E8B57'},
+  {id:16,cat:'des',name:'红糖糍粑',price:16,desc:'软糯香甜',emoji:'🍡',tag:'',sold:198,color:'#C0392B'},
+  {id:17,cat:'des',name:'杨枝甘露',price:22,desc:'芒果西米',emoji:'🥭',tag:'招牌',sold:176,color:'#F1C40F'}
+];
+var CART={};
+var curCat='hot';
+var PERHEAD=[
+  {id:'table',name:'餐位费',emoji:'💺',price:2,def:true,req:true},
+  {id:'tool',name:'餐具费',emoji:'🥢',price:2,def:true,req:false},
+  {id:'tissue',name:'餐巾纸',emoji:'🧻',price:1,def:true,req:false},
+  {id:'wet',name:'湿巾',emoji:'💧',price:1.5,def:false,req:false}
+];
+var PERSEL={};PERHEAD.forEach(function(p){PERSEL[p.id]=p.def;});
+var PAX=2;
+var ORDER=null;
+var PAYM='wx';
+var RATE=0;
+
+/* ===== 主题 / 时钟 / 提示 ===== */
+function toggleTheme(){var h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('navTheme').textContent=d?'☀':'☾';}
+var _t;
+function tst(m){var e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(_t);_t=setTimeout(function(){e.classList.remove('show')},1600);}
+function tick(){var n=new Date();document.getElementById('clk').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+setInterval(tick,1000);tick();
+
+/* ===== 环境识别（真实 UA） ===== */
+function detectEnv(){
+  var ua=(navigator.userAgent||'').toLowerCase(),label;
+  if(ua.indexOf('micromessenger')>-1){CHANNEL='wx';label='已识别：微信环境';}
+  else if(ua.indexOf('alipayclient')>-1){CHANNEL='ali';label='已识别：支付宝环境';}
+  else{CHANNEL='browser';label='普通浏览器 · 请选择支付方式';}
+  document.getElementById('envTxt').textContent=label;
+  document.getElementById('envDots').style.display='none';
+  document.getElementById('chsw').style.opacity=CHANNEL==='browser'?'1':'.4';
+  pickCh(CHANNEL);
+}
+function pickCh(ch){CHANNEL=ch;document.getElementById('chWx').classList.toggle('on',ch==='wx');document.getElementById('chAli').classList.toggle('on',ch==='ali');}
+
+/* ===== 引导流程 ===== */
+function goMode(){document.getElementById('boot').classList.add('hide');document.getElementById('gMode').classList.remove('hide');}
+function pickMode(el,m){document.querySelectorAll('#gMode .mode-card').forEach(function(c){c.classList.remove('on');});el.classList.add('on');STORE.orderType=m;}
+function goPax(){document.getElementById('gMode').classList.add('hide');document.getElementById('gPax').classList.remove('hide');}
+function setPax(d){PAX=Math.max(1,Math.min(20,PAX+d));syncPax();}
+function setPaxVal(n){PAX=n;syncPax();}
+function syncPax(){document.getElementById('paxVal').textContent=PAX;var pv2=document.getElementById('paxVal2');if(pv2)pv2.textContent=PAX;var pn=document.getElementById('paxN');if(pn)pn.textContent=PAX;var q=document.getElementById('paxQuick');if(q)q.querySelectorAll('div').forEach(function(d){d.classList.toggle('on',+d.textContent===PAX);});}
+function goAuth(){document.getElementById('gPax').classList.add('hide');document.getElementById('gAuth').classList.remove('hide');}
+function doAuth(ok){document.getElementById('gAuth').classList.add('hide');var u=CHANNEL==='ali'?'支付宝用户':'微信用户';document.getElementById('meName').textContent=ok?('会员 '+u):u;document.getElementById('meSub').textContent=ok?'已授权手机号 · 会员价二期启用':'未授权手机号';enterStore();}
+
+/* ===== 进入点餐 / 模式 ===== */
+function enterStore(){STORE.pax=PAX;syncPax();document.getElementById('tblNo').textContent=STORE.tbl;document.getElementById('tabbar').style.display='flex';document.getElementById('cartbar').style.display='block';applyMode();renderCats();renderDishes(curCat);updateCartUI();switchTab('menu');tst('已进入 '+STORE.tbl+' 桌');}
+function applyMode(){var m=STORE.mode,t=document.getElementById('modeTag'),tip=document.getElementById('modeTip');if(m==='pre'){t.textContent='先付模式';tip.innerHTML='💡 先付后吃：下单即支付，后厨立即备餐';tip.classList.remove('warn');}else if(m==='post'){t.textContent='后付模式';tip.innerHTML='💡 后付结账：先落单备餐，离店统一买单（挂账）';tip.classList.remove('warn');}else{t.textContent='仅点单·前台结';tip.innerHTML='⚠️ 仅点单模式：线上不支付，请到前台结账';tip.classList.add('warn');}t.onclick=switchMode;}
+function switchMode(){var n={pre:'post',post:'front',front:'pre'};STORE.mode=n[STORE.mode];applyMode();tst('已切换：'+document.getElementById('modeTag').textContent);}
+
+/* ===== 菜单 ===== */
+function renderCats(){var h='';CATS.forEach(function(c){var cnt=0;for(var k in CART){if(DISHES.find(function(d){return d.id==k}).cat===c.id)cnt+=CART[k];}h+='<div class="'+(c.id===curCat?'on':'')+'" onclick="selCat(\''+c.id+'\')">'+c.name+(cnt?'<span class="cb">'+cnt+'</span>':'')+'</div>';});document.getElementById('catCol').innerHTML=h;}
+function selCat(id){curCat=id;renderCats();renderDishes(id);}
+function renderDishes(catId){var list=DISHES.filter(function(d){return d.cat===catId;});var h='<div class="cat-h">'+CATS.find(function(c){return c.id===catId}).name+' <span class="muted">'+list.length+' 道</span></div>';list.forEach(function(d){var q=CART[d.id]||0;h+='<div class="dish"><div class="pic" style="background:linear-gradient(135deg,'+d.color+','+shade(d.color)+')">'+d.emoji+(d.tag?'<span class="sold" style="background:'+d.color+'">'+d.tag+'</span>':'')+'</div><div class="info"><div class="dn">'+d.name+(d.tag?' <span class="tag">'+d.tag+'</span>':'')+'</div><div class="ds">'+d.desc+'</div><div class="sale">月售 '+d.sold+'</div><div class="bot"><span class="price"><span class="u">¥</span>'+d.price+'</span><div class="stepper '+(q?'has':'')+'"><span class="mi" onclick="decCart('+d.id+')">−</span><span class="qn">'+q+'</span><span class="pl" onclick="addCart('+d.id+')">+</span></div></div></div></div>';});document.getElementById('dishCol').innerHTML=h;}
+function shade(hex){var n=parseInt(hex.slice(1),16);var r=(n>>16)&255,g=(n>>8)&255,b=n&255;return 'rgb('+Math.round(r*.7)+','+Math.round(g*.7)+','+Math.round(b*.7)+')';}
+
+/* ===== 购物车 ===== */
+function addCart(id){CART[id]=(CART[id]||0)+1;afterCart();}
+function decCart(id){if(!CART[id])return;CART[id]--;if(CART[id]<=0)delete CART[id];afterCart();}
+function afterCart(){renderCats();renderDishes(curCat);updateCartUI();}
+function cartCount(){var n=0;for(var k in CART)n+=CART[k];return n;}
+function cartTotal(){var t=0;for(var k in CART)t+=DISHES.find(function(d){return d.id==k}).price*CART[k];return t;}
+function updateCartUI(){var n=cartCount(),t=cartTotal();var cnt=document.getElementById('cartCnt');if(n>0){cnt.style.display='flex';cnt.textContent=n;document.getElementById('cartIc').classList.remove('empty');}else{cnt.style.display='none';document.getElementById('cartIc').classList.add('empty');}document.getElementById('cartTotal').innerHTML=n?('<span class="u" style="font-size:12px">¥</span>'+t):'未选购';document.getElementById('cartTotal').classList.toggle('zero',!n);document.getElementById('cartSub').textContent=n?('已选 '+n+' 件 · 预估 ¥'+t):'先选几道菜吧';document.getElementById('cartGo').disabled=!n;var h='';for(var k in CART){var d=DISHES.find(function(x){return x.id==k});var q=CART[k];h+='<div class="citem"><span style="font-size:20px">'+d.emoji+'</span><span class="cn">'+d.name+'</span><div class="stepper has"><span class="mi" onclick="decCart('+d.id+')">−</span><span class="qn">'+q+'</span><span class="pl" onclick="addCart('+d.id+')">+</span></div><span class="cp">¥'+(d.price*q)+'</span></div>';}document.getElementById('cartList').innerHTML=h;}
+function toggleCart(){if(!cartCount()){tst('还没有选菜哦');return;}var on=document.getElementById('cartPanel').classList.toggle('show');document.getElementById('cartMask').classList.toggle('show',on);}
+function clearCart(){CART={};document.getElementById('cartPanel').classList.remove('show');document.getElementById('cartMask').classList.remove('show');renderCats();renderDishes(curCat);updateCartUI();tst('已清空购物车');}
+
+/* ===== 路由 ===== */
+function switchTab(t){['menu','order','me','review'].forEach(function(p){var e=document.getElementById('p_'+p);if(e)e.classList.toggle('on',p===t);});document.querySelectorAll('.tabbar .tb').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-t')===t);});document.getElementById('cartbar').style.display=t==='menu'?'block':'none';document.getElementById('navTtl').textContent=t==='menu'?'点餐':(t==='order'?'我的订单':(t==='me'?'个人中心':'评价'));document.getElementById('navBk').style.visibility=(t==='menu'||t==='review')?'hidden':'visible';if(t==='order')renderOrder();if(t==='me')document.getElementById('stAmt').textContent='¥'+(ORDER?ORDER.total:0);document.getElementById('tabbar').style.display=(t==='review')?'none':'flex';}
+function navBack(){if(document.getElementById('p_review').classList.contains('on')){switchTab('order');return;}if(document.getElementById('p_order').classList.contains('on')){switchTab('menu');return;}if(document.getElementById('p_me').classList.contains('on')){switchTab('menu');return;}}
+window.addEventListener('load',detectEnv);
+/* ===== 选人数浮层（重选） ===== */
+function openPaxSheet(){syncPax();document.getElementById('paxSheet').classList.add('show');}
+function closePaxSheet(){document.getElementById('paxSheet').classList.remove('show');}
+function confirmPaxSheet(){STORE.pax=PAX;syncPax();closePaxSheet();tst('人数已更新为 '+PAX+' 人');}
+
+/* ===== 结算 / 支付 ===== */
+function now(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function openCheckout(){if(!cartCount()){tst('还没有选菜哦');return;}document.getElementById('sheet').classList.add('show');renderCheckout();}
+function closeSheet(){document.getElementById('sheet').classList.remove('show');}
+function choosePay(m){PAYM=m;document.querySelectorAll('.payopt').forEach(function(o,i){o.classList.toggle('on',['wx','ali'][i]===m);});var b=document.getElementById('payBtn');if(b)b.textContent=(m==='wx'?'微信支付':'支付宝')+' ¥'+orderTotal();}
+function perHeadTotal(){var t=0,p=STORE.pax||2;PERHEAD.forEach(function(x){if(PERSEL[x.id])t+=x.price*p;});return t;}
+function orderTotal(){return cartTotal()+perHeadTotal();}
+function tglPer(id){var x=PERHEAD.find(function(p){return p.id===id;});if(!x||x.req)return;PERSEL[id]=!PERSEL[id];renderCheckout();}
+function renderPerHead(){var p=STORE.pax||2,h='<div class="perhead"><div class="ph-h"><span>按人收费项（'+p+' 人 · 金额自动核算）</span></div>';PERHEAD.forEach(function(x){var on=PERSEL[x.id];h+='<div class="ph-row '+(x.req?'req':'')+'" onclick="'+(x.req?'':'tglPer(\''+x.id+'\')')+'"><span class="pe">'+x.emoji+'</span><span class="pn"><b>'+x.name+'</b><small>¥'+x.price+'/位</small></span><span class="pp">¥'+(x.price*p)+'</span><span class="ck '+(on?'on':'')+'">'+(on?'✓':'')+'</span></div>';});h+='<div class="per-sum"><span>按人收费小计</span><span>¥'+perHeadTotal()+'</span></div></div>';return h;}
+function renderCheckout(){var add=!!ORDER,dh='';for(var k in CART){var d=DISHES.find(function(x){return x.id==k});var q=CART[k];dh+='<div class="li"><span>'+d.emoji+' '+d.name+'<span class="q">×'+q+'</span></span><span class="price">¥'+(d.price*q)+'</span></div>';}var m=STORE.mode,foot;if(m==='pre'){foot='<div id="payWrap"><div class="payopt '+(PAYM==='wx'?'on':'')+'" onclick="choosePay(\'wx\')"><div class="pi" style="background:#09BB07">💚</div><div class="pn">微信支付</div><div class="ck">✓</div></div><div class="payopt '+(PAYM==='ali'?'on':'')+'" onclick="choosePay(\'ali\')"><div class="pi" style="background:#1677FF">🔵</div><div class="pn">支付宝</div><div class="ck"></div></div></div><button class="btn brand block btn-lg" id="payBtn" style="margin-top:12px" onclick="doPay()">'+(PAYM==='wx'?'微信支付':'支付宝')+' ¥'+orderTotal()+'</button>';}else if(m==='post'){foot='<div class="mini-banner o" style="margin:6px 0">📝 后付模式：本次先挂账，离店时统一结账</div><button class="btn brand block btn-lg" style="margin-top:12px" onclick="submitPostpay()">提交订单（离店结账）</button>';}else{foot='<div class="mini-banner o" style="margin:6px 0;background:var(--er-bg);color:var(--danger)">⚠️ 仅点单模式：线上不可支付，请到前台结账</div><button class="btn brand block btn-lg" style="margin-top:12px" onclick="submitFront()">提交订单（前台结账）</button>';}document.getElementById('sheetTtl').textContent=add?'加菜补单':'确认订单';document.getElementById('sheetBody').innerHTML='<div class="row"><span class="l">桌台</span><span>'+STORE.tbl+' · '+STORE.pax+' 人</span></div><div class="row"><span class="l">就餐模式</span><span>'+(m==='pre'?'先付后吃':(m==='post'?'后付结账':'仅点单·前台结'))+'</span></div><div style="padding:10px 0"><div style="color:var(--t2);font-size:12px;margin-bottom:6px">备注（选填）</div><textarea class="area" id="note" placeholder="如：不要香菜、微辣、多米饭…"></textarea><div style="margin-top:6px"><span class="chip" onclick="tglChip(this)">不要辣</span><span class="chip" onclick="tglChip(this)">少油</span><span class="chip" onclick="tglChip(this)">多米饭</span><span class="chip" onclick="tglChip(this)">打包</span></div></div>'+renderPerHead()+'<div style="border-top:1px dashed var(--bd);margin:4px 0"></div>'+dh+'<div class="total-bar"><span class="tl">合计（'+cartCount()+' 件 + 按人项）</span><span class="tv">¥'+orderTotal()+'</span></div>'+foot;}
+function tglChip(el){el.classList.toggle('on');}
+function doPay(){var m=PAYM==='wx'?'微信支付':'支付宝';tst('正在调起'+m+'…');setTimeout(function(){buildOrder(orderTotal());closeSheet();document.getElementById('payokTtl').textContent='支付成功';document.getElementById('payokSub').textContent=m+'成功 · 已通知后厨';document.getElementById('payok').classList.add('show');startOrderFlow();},700);}
+function submitPostpay(){buildOrder(0);closeSheet();tst('已提交 · 离店时统一结账（挂账）');startOrderFlow();}
+function submitFront(){buildOrder(0);closeSheet();tst('已提交 · 请到前台结账');startOrderFlow();}
+function buildOrder(paid){var items=[];for(var k in CART){var d=DISHES.find(function(x){return x.id==k});items.push({name:d.name,emoji:d.emoji,price:d.price,q:CART[k]});}PERHEAD.forEach(function(p){if(PERSEL[p.id]){var amt=p.price*(STORE.pax||2);items.push({name:p.emoji+' '+p.name+'（'+(STORE.pax||2)+'人）',emoji:p.emoji,price:amt,q:1});}});ORDER={no:'A01'+Math.floor(100000+Math.random()*900000),items:items,total:orderTotal(),mode:STORE.mode,channel:CHANNEL,paid:paid,settled:false,steps:[{k:'order',t:'已下单',time:now(),done:true,cur:false},{k:'accept',t:'后厨接单',time:'',done:false,cur:true},{k:'cook',t:'制作中',time:'',done:false,cur:false},{k:'serve',t:'已出餐 · 上菜中',time:'',done:false,cur:false}]};CART={};updateCartUI();}
+function startOrderFlow(){[2500,6500,12000].forEach(function(ms,idx){setTimeout(function(){advance(idx);},ms);});}
+function advance(idx){if(!ORDER)return;if(idx===0){ORDER.steps[1].done=true;ORDER.steps[1].cur=false;ORDER.steps[2].cur=true;ORDER.steps[2].time=now();}if(idx===1){ORDER.steps[2].done=true;ORDER.steps[2].cur=false;ORDER.steps[3].cur=true;ORDER.steps[3].time=now();}if(idx===2){ORDER.steps[3].done=true;ORDER.steps[3].cur=false;}if(document.getElementById('p_order').classList.contains('on'))renderOrder();}
+
+/* ===== 订单页 / 评价 / 呼叫 ===== */
+function renderOrder(){var b=document.getElementById('orderBody');if(!ORDER){b.innerHTML='<div class="empty-p"><div class="e">🧾</div>还没有订单<br>去点餐页下单吧</div>';return;}var tl='<div class="tl">';ORDER.steps.forEach(function(s){tl+='<div class="step '+(s.done?'done':'')+(s.cur?' cur':'')+'"><div class="dot">'+(s.done?'✓':(s.cur?'●':''))+'</div><div class="tx"><div class="th">'+s.t+'</div><div class="td">'+(s.time||'等待中…')+'</div></div></div>';});tl+='</div>';var last=ORDER.steps[ORDER.steps.length-1],doneAll=last.done;var ost=doneAll?(ORDER.mode==='post'?(ORDER.settled?'已结清':'待结账'):(ORDER.mode==='front'?(ORDER.settled?'已结清':'待前台结'):'已完成')):'制作中';var dl='';ORDER.items.forEach(function(it){dl+='<div class="li"><span>'+it.emoji+' '+it.name+'<span class="q">×'+it.q+'</span></span><span class="price">¥'+(it.price*it.q)+'</span></div>';});var ocl='<div class="of"><button class="btn ghost" onclick="addMore()">➕ 加菜</button><button class="btn" onclick="callWaiter(\'urge\')">⚡ 催单</button><button class="btn" onclick="callWaiter(\'call\')">🙋 呼叫</button>';if(doneAll&&ORDER.mode==='post'&&!ORDER.settled)ocl+='<button class="btn brand" onclick="payBill()">💳 去结账 ¥'+ORDER.total+'</button>';if(doneAll&&ORDER.mode==='front'&&!ORDER.settled)ocl+='<button class="btn brand" onclick="payBill()">💳 前台结账 ¥'+ORDER.total+'</button>';if(doneAll&&ORDER.mode==='pre')ocl+='<button class="btn brand" onclick="goReview()">⭐ 评价</button>';ocl+='</div>';var bnr=ORDER.mode==='pre'?'✅ 已支付 ¥'+ORDER.paid:(ORDER.mode==='post'?'📝 后付挂账 · 离店结清'+(ORDER.settled?' · 已结清':''):'⚠️ 仅点单 · 前台结清'+(ORDER.settled?' · 已结清':''));b.innerHTML='<div class="ocard"><div class="oh"><div class="no">订单 '+ORDER.no+'</div><div class="ost '+(doneAll?'a':'b')+'">'+ost+'</div></div><div class="mini-banner '+(ORDER.mode==='pre'?'':'o')+'" style="margin:0 0 10px">'+bnr+'</div>'+tl+'<div style="border-top:1px dashed var(--bd);margin:10px 0"></div>'+dl+'<div class="row" style="border:none;padding-top:8px"><span class="l">合计</span><span class="price" style="font-size:17px;color:var(--brand)">¥'+ORDER.total+'</span></div>'+ocl+'</div>';document.getElementById('stAmt').textContent='¥'+ORDER.total;}
+function callWaiter(type){tst(type==='urge'?'已发送催单，后厨会加快 🔥':'已呼叫服务员，请稍候 🙋');}
+function addMore(){switchTab('menu');tst('继续加菜，结算时并入本桌订单');}
+function afterPay(){document.getElementById('payok').classList.remove('show');switchTab('order');}
+function goReview(){['menu','order','me','review'].forEach(function(p){var e=document.getElementById('p_'+p);if(e)e.classList.toggle('on',p==='review');});document.getElementById('navTtl').textContent='评价';document.getElementById('navBk').style.visibility='visible';document.getElementById('tabbar').style.display='none';}
+function payBill(){if(ORDER.mode==='front'){ORDER.settled=true;ORDER.paid=ORDER.total;tst('前台收银入账 ¥'+ORDER.total+'，欢迎下次光临');renderOrder();return;}var m=CHANNEL==='ali'?'支付宝':'微信支付';tst('正在调起'+m+'…');setTimeout(function(){ORDER.settled=true;ORDER.paid=ORDER.total;tst('已结清 ¥'+ORDER.total+'，欢迎下次光临');renderOrder();},700);}
+function rate(n){RATE=n;var ss=document.getElementById('stars').children;for(var i=0;i<ss.length;i++)ss[i].classList.toggle('on',i<n);var txt=['','很差','一般','满意','很好','非常满意'];document.getElementById('rateTxt').textContent=txt[n];}
+function submitReview(){if(!RATE){tst('请先点亮星星哦');return;}tst('感谢评价！已提交 ⭐');switchTab('order');}</script>
+</body>
+</html>

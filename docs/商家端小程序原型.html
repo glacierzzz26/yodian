@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>悦点 · 商家端小程序 v1</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --brand:#1677FF;--brand2:#4096FF;--brand-soft:rgba(22,119,255,.1);
+  --ok:#52C41A;--ok-bg:rgba(82,196,26,.1);--warn:#FA8C16;--warn-bg:rgba(250,140,22,.1);
+  --danger:#FF4D4F;--danger-bg:rgba(255,77,79,.1);--info:#1677FF;
+  --bg:#F0F2F5;--card:#FFFFFF;--t1:#1F1F1F;--t2:#666;--t3:#999;
+  --bd:#E5E6EB;--bd2:#F2F3F5;--input:#F7F8FA;--shadow:0 2px 8px rgba(0,0,0,.06);
+  --radius:12px;--head:#FAFBFC;
+}
+html[data-theme=dark]{
+  --brand:#4096FF;--brand2:#1677FF;--brand-soft:rgba(64,150,255,.16);
+  --bg:#121316;--card:#1E2024;--t1:#F0F0F0;--t2:#A8ABB0;--t3:#6E717A;
+  --bd:#2A2D33;--bd2:#232529;--input:#1A1C20;--shadow:0 2px 8px rgba(0,0,0,.3);
+  --head:#1A1C20;--ok-bg:rgba(82,196,26,.16);--warn-bg:rgba(250,140,22,.16);--danger-bg:rgba(255,77,79,.16);
+}
+html,body{height:100%;background:#000;font-size:14px}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:10px}
+.phone{width:390px;max-width:100%;height:820px;max-height:calc(100vh - 20px);background:var(--bg);border-radius:46px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;border:10px solid #1A1A1A}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg);flex:0 0 auto}
+.statusbar .ic i{font-style:normal;margin-left:4px}
+.navbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:var(--bg);flex:0 0 auto}
+.navbar .bk{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--t1);cursor:pointer;font-weight:300}
+.navbar .ttl{font-size:17px;font-weight:700;color:var(--t1)}
+.navbar .rt{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.content::-webkit-scrollbar{width:0}
+.pg{display:none}.pg.on{display:block}
+/* 登录 */
+.login{position:absolute;inset:0;background:linear-gradient(160deg,#1677FF,#4096FF);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px;text-align:center;z-index:30}
+.login .logo{font-size:56px;margin-bottom:10px}
+.login .bn{font-size:22px;font-weight:800;margin-bottom:4px}
+.login .bs{font-size:13px;opacity:.9;margin-bottom:24px}
+.lg-role{display:flex;gap:10px;margin-bottom:18px;width:100%}
+.lg-role div{flex:1;padding:12px 0;border-radius:12px;background:rgba(255,255,255,.18);font-size:13px;cursor:pointer;border:1.5px solid transparent}
+.lg-role div.on{background:#fff;color:var(--brand);font-weight:700}
+.btn{padding:11px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
+.btn:active{transform:scale(.97)}
+.btn.brand{background:var(--brand);color:#fff}
+.btn.ghost{background:var(--input);color:var(--t1)}
+.btn.block{width:100%;padding:13px;font-size:15px}
+.btn.dan{background:var(--danger);color:#fff}
+.btn[disabled]{opacity:.5}
+/* 工作台 */
+.sec{padding:14px 14px 6px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-h h3{font-size:15px;font-weight:700;color:var(--t1)}
+.sec-h .more{font-size:12px;color:var(--brand);cursor:pointer}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.stat .v{font-size:22px;font-weight:800;color:var(--t1)}
+.stat .v.brand{color:var(--brand)}
+.stat .v.danger{color:var(--danger)}
+.stat .v.warn{color:var(--warn)}
+.stat .k{font-size:12px;color:var(--t2);margin-top:3px}
+.stat .d{font-size:11px;color:var(--t3);margin-top:6px}
+/* 桌台缩略 */
+.zone-tabs{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+.zone-tabs div{padding:6px 14px;border-radius:16px;background:var(--card);font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap;border:1px solid var(--bd)}
+.zone-tabs div.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.tb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tb{background:var(--card);border-radius:var(--radius);padding:12px;position:relative;border:1px solid var(--bd2);cursor:pointer;box-shadow:var(--shadow)}
+.tb .tb-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.tb .tb-n{font-size:16px;font-weight:800;color:var(--t1)}
+.tb .tb-m{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
+.tb .tb-m.pre{background:var(--brand-soft);color:var(--brand)}
+.tb .tb-m.post{background:var(--warn-bg);color:var(--warn)}
+.tb .tb-m.front{background:rgba(22,119,255,.1);color:var(--info)}
+.tb .tb-a{font-size:17px;font-weight:800;color:var(--danger);margin:4px 0 2px}
+.tb .tb-a.zero{color:var(--t3);font-size:13px;font-weight:600}
+.tb .tb-b{font-size:11px;color:var(--t3);line-height:1.4}
+.tb .tb-f{display:flex;align-items:center;gap:6px;margin-top:6px}
+.tag{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px}
+.tag.g{background:var(--ok-bg);color:var(--ok)}
+.tag.b{background:var(--brand-soft);color:var(--brand)}
+.tag.o{background:var(--warn-bg);color:var(--warn)}
+.tag.r{background:var(--danger-bg);color:var(--danger)}
+.tag.d{background:var(--bd2);color:var(--t2)}
+.tb.locked::after{content:'🔒';position:absolute;top:8px;right:8px;font-size:13px}
+/* 待办列表 */
+.todo{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:10px}
+.todo-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--bd2);cursor:pointer}
+.todo-item:last-child{border:none}
+.todo-item .ti-ic{font-size:20px;width:32px;text-align:center}
+.todo-item .ti-c{flex:1}
+.todo-item .ti-t{font-size:14px;font-weight:600;color:var(--t1)}
+.todo-item .ti-s{font-size:12px;color:var(--t2);margin-top:2px}
+.todo-item .ti-r{font-size:11px;color:var(--danger);font-weight:700}
+.todo-item .arr{color:var(--t3)}
+/* 订单 */
+.filt{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:var(--bg);position:sticky;top:0;z-index:5}
+.filt div{padding:6px 14px;border-radius:16px;background:var(--card);font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap;border:1px solid var(--bd)}
+.filt div.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.o-card{background:var(--card);border-radius:var(--radius);padding:13px 14px;margin:8px 14px;box-shadow:var(--shadow)}
+.o-card .o-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.o-card .o-no{font-size:12px;color:var(--t2);font-weight:600}
+.o-card .o-st{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px}
+.o-card .o-st.r{background:var(--danger-bg);color:var(--danger)}
+.o-card .o-st.b{background:var(--brand-soft);color:var(--brand)}
+.o-card .o-st.g{background:var(--ok-bg);color:var(--ok)}
+.o-card .o-st.o{background:var(--warn-bg);color:var(--warn)}
+.o-card .o-st.d{background:var(--bd2);color:var(--t2)}
+.o-card .o-row{display:flex;justify-content:space-between;font-size:13px;color:var(--t1);padding:3px 0}
+.o-card .o-row .l{color:var(--t2)}
+.o-card .o-row .amt{font-weight:700;color:var(--danger)}
+.o-card .o-f{display:flex;gap:8px;margin-top:10px}
+.o-card .o-f .btn{flex:1;padding:8px 0;font-size:13px}
+/* 我的 */
+.uc-head{padding:24px 18px 18px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;display:flex;align-items:center;gap:14px}
+.uc-av{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+.uc-head .un{font-size:17px;font-weight:800}
+.uc-head .us{font-size:12px;opacity:.9;margin-top:3px}
+.uc-list{margin:14px;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.uc-item{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--bd2);font-size:14px;color:var(--t1);cursor:pointer}
+.uc-item:last-child{border:none}
+.uc-item .ui{font-size:18px;width:24px;text-align:center}
+.uc-item .arr{margin-left:auto;color:var(--t3)}
+.uc-item .sw{margin-left:auto;width:42px;height:24px;border-radius:12px;background:var(--bd);position:relative;cursor:pointer;transition:.2s}
+.uc-item .sw.on{background:var(--brand)}
+.uc-item .sw::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.uc-item .sw.on::after{left:20px}
+/* 抽屉 */
+.dmask{position:absolute;inset:0;z-index:40;display:none}
+.dmask.on{display:block}
+.dmask .mask{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.drw{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:18px 18px 0 0;max-height:80%;overflow-y:auto;transform:translateY(100%);transition:.25s;z-index:2}
+.dmask.on .drw{transform:translateY(0)}
+.drw .dh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bd2);position:sticky;top:0;background:var(--card);z-index:2}
+.drw .dh h3{font-size:16px;font-weight:700;color:var(--t1)}
+.drw .dh .x{font-size:20px;color:var(--t2);cursor:pointer}
+.drw .db{padding:14px 16px 24px}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:10px 12px;font-size:13px}
+.kv dt{color:var(--t2)}
+.kv dd{color:var(--t1);font-weight:600}
+.kv dd.mono{font-family:monospace}
+.dlist{margin-top:12px;border-top:1px dashed var(--bd);padding-top:10px}
+.dlist .li{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--t1)}
+.dlist .li .q{color:var(--t3);margin:0 6px}
+.dlist .li .p{color:var(--danger);font-weight:700}
+.drw .df{display:flex;gap:8px;padding:14px 16px 20px;border-top:1px solid var(--bd2);position:sticky;bottom:0;background:var(--card)}
+.drw .df .btn{flex:1;padding:11px 0}
+/* 支付弹窗 */
+.mask2{position:absolute;inset:0;z-index:50;display:none;background:rgba(0,0,0,.45)}
+.mask2.on{display:flex;align-items:flex-end}
+.modal{background:var(--card);border-radius:18px 18px 0 0;width:100%;padding:18px 16px 24px;animation:up .25s}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h3{font-size:16px;font-weight:700;color:var(--t1);text-align:center;margin-bottom:14px}
+.pay-amt{text-align:center;font-size:32px;font-weight:800;color:var(--danger);margin:6px 0 14px}
+.pay-o{display:flex;align-items:center;gap:12px;padding:13px;border:1.5px solid var(--bd);border-radius:12px;margin-bottom:10px;cursor:pointer}
+.pay-o.on{border-color:var(--brand);background:var(--brand-soft)}
+.pay-o .pi{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+.pay-o .pn{flex:1;font-size:14px;font-weight:600;color:var(--t1)}
+.pay-o .ck{width:20px;height:20px;border-radius:50%;border:2px solid var(--bd)}
+.pay-o.on .ck{background:var(--brand);border-color:var(--brand);position:relative}
+.pay-o.on .ck::after{content:'✓';color:#fff;font-size:12px;position:absolute;top:1px;left:4px}
+.alert{padding:10px 12px;border-radius:10px;font-size:12px;display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+.alert.o{background:var(--warn-bg);color:var(--warn)}
+.alert.r{background:var(--danger-bg);color:var(--danger)}
+.alert.b{background:var(--brand-soft);color:var(--brand)}
+.alert u{font-weight:700}
+/* tabbar */
+.tabbar{height:56px;display:flex;background:var(--card);border-top:1px solid var(--bd2);flex:0 0 auto}
+.tabbar .tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--t3);cursor:pointer;gap:2px}
+.tabbar .tb.on{color:var(--brand)}
+.tabbar .tb .ti{font-size:18px}
+.tabbar .tb .em{position:absolute;top:4px;right:50%;transform:translateX(20px);background:var(--danger);color:#fff;font-size:9px;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:700}
+.tabbar .tb{position:relative}
+/* toast */
+.toast{position:absolute;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 18px;border-radius:22px;z-index:99;opacity:0;transition:.25s;white-space:nowrap;max-width:88%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty-p{text-align:center;color:var(--t3);padding:50px 20px;font-size:13px}
+.empty-p .e{font-size:42px;opacity:.5;margin-bottom:8px}
+.banner{margin:0 14px 12px;padding:10px 12px;border-radius:10px;background:var(--ok-bg);color:var(--ok);font-size:12px;display:flex;align-items:center;gap:8px}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner.r{background:var(--danger-bg);color:var(--danger)}
+.o-foods-toggle{padding:8px 0;font-size:12px;color:var(--brand);cursor:pointer;border-top:1px dashed var(--bd);margin-top:6px}
+.o-foods{display:none;padding:4px 0 8px}
+.o-foods.show{display:block}
+.o-foods .o-food{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--t1)}
+.o-foods .o-food .p{color:var(--danger);font-weight:600}</style>
+</head>
+<body>
+<div class="phone">
+  <div class="scr">
+    <div class="statusbar"><span id="clk">22:10</span><span class="ic"><i>📶</i><i>🔋</i></span></div>
+    <div class="navbar">
+      <div class="bk" id="navBk" onclick="navBack()" style="visibility:hidden">‹</div>
+      <div class="ttl" id="navTtl">工作台</div>
+      <div class="rt" id="navTheme" onclick="toggleTheme()">☀</div>
+    </div>
+    <div class="content" id="content">
+<!-- 登录 -->
+<div class="login" id="login">
+  <div class="logo">🏪</div>
+  <div class="bn">悦点 · 商家端</div>
+  <div class="bs">悦点 · 手机看店</div>
+  <div class="lg-role" id="lgRole">
+    <div class="on" onclick="pickRole(this,'店长')">👨‍💼 店长</div>
+    <div onclick="pickRole(this,'收银员')">💰 收银员</div>
+    <div onclick="pickRole(this,'后厨')">👨‍🍳 后厨</div>
+  </div>
+  <input class="btn ghost block" style="background:rgba(255,255,255,.2);color:#fff;margin-bottom:10px;text-align:center" value="工号 1001" id="lgU" readonly>
+  <button class="btn block" style="background:#fff;color:var(--brand);font-size:16px" onclick="doLogin()">登 录</button>
+  <div style="margin-top:14px;font-size:11px;opacity:.8">店长权限：全功能 · 收银员：收银结账 · 后厨：直达 KDS</div>
+</div>
+<!-- 工作台 -->
+<div class="pg on" id="p_dash">
+  <div class="banner" id="bizBanner"><i>🟢</i><span>晚市营业中 · 17:00–21:30</span></div>
+  <div class="sec">
+    <div class="sec-h"><h3>今日概览</h3><span class="more" onclick="switchTab('orders')">查看订单 ›</span></div>
+    <div class="stats">
+      <div class="stat"><div class="v brand">¥8,642</div><div class="k">已收营业额</div><div class="d">较昨日 +6.2%</div></div>
+      <div class="stat"><div class="v">93</div><div class="k">订单数</div><div class="d">堂食 81 · 外带 12</div></div>
+      <div class="stat"><div class="v warn">¥1,286</div><div class="k">未结账挂账</div><div class="d">3 桌 · 不计入营业额</div></div>
+      <div class="stat"><div class="v danger">2</div><div class="k">需处理</div><div class="d">1 重复扣款 · 1 差异</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><h3>待办</h3></div>
+    <div class="todo" id="todoList">
+      <div class="todo-item" onclick="switchTab('tables')">
+        <div class="ti-ic">🟥</div>
+        <div class="ti-c"><div class="ti-t">B02 牡丹厅未结账 ¥1,286</div><div class="ti-s">后付挂账 · 84 分钟</div></div>
+        <div class="ti-r">去结账</div><div class="arr">›</div>
+      </div>
+      <div class="todo-item" onclick="switchTab('tables')">
+        <div class="ti-ic">🟧</div>
+        <div class="ti-c"><div class="ti-t">C03 露台 仅点单·前台结 ¥88</div><div class="ti-s">前台收银结账</div></div>
+        <div class="ti-r">去结账</div><div class="arr">›</div>
+      </div>
+      <div class="todo-item" onclick="switchTab('orders');filterOrders('需处理')">
+        <div class="ti-ic">⚠️</div>
+        <div class="ti-c"><div class="ti-t">重复扣款待处理</div><div class="ti-s">B03 订单 · 金额不符</div></div>
+        <div class="ti-r">处理</div><div class="arr">›</div>
+      </div>
+      <div class="todo-item" onclick="tst('b','打印机已重连')">
+        <div class="ti-ic">🖨️</div>
+        <div class="ti-c"><div class="ti-t">热菜档打印机离线</div><div class="ti-s">已 12 分钟 · 影响出单</div></div>
+        <div class="arr">›</div>
+      </div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><h3>桌台速览</h3><span class="more" onclick="switchTab('tables')">全部 ›</span></div>
+    <div class="stats" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="stat" style="text-align:center;padding:10px 6px"><div class="v" style="font-size:18px;color:var(--t3)">11</div><div class="k" style="font-size:11px">空闲</div></div>
+      <div class="stat" style="text-align:center;padding:10px 6px"><div class="v brand" style="font-size:18px">9</div><div class="k" style="font-size:11px">就餐中</div></div>
+      <div class="stat" style="text-align:center;padding:10px 6px"><div class="v warn" style="font-size:18px">3</div><div class="k" style="font-size:11px">未结账</div></div>
+      <div class="stat" style="text-align:center;padding:10px 6px"><div class="v" style="font-size:18px;color:var(--ok)">1</div><div class="k" style="font-size:11px">待清台</div></div>
+    </div>
+  </div>
+</div>
+<!-- 桌台 -->
+<div class="pg" id="p_tables">
+  <div class="sec" style="padding-bottom:4px">
+    <div class="sec-h"><h3>桌台图</h3><span class="more" onclick="tst('b','PC 后台可配置区域与结账模式')">管理 ›</span></div>
+    <div class="zone-tabs" id="zoneTabs">
+      <div class="on" data-z="all">全部 24</div>
+      <div data-z="A">大厅 A</div>
+      <div data-z="B">包间 B</div>
+      <div data-z="C">露台 C</div>
+    </div>
+  </div>
+  <div class="tb-grid" id="tbGrid" style="padding:0 14px 16px"></div>
+</div>
+<!-- 订单 -->
+<div class="pg" id="p_orders">
+  <div class="filt" id="ordFilt">
+    <div class="on" data-f="all">全部 96</div>
+    <div data-f="未结账">未结账 3</div>
+    <div data-f="备餐中">备餐中 5</div>
+    <div data-f="已出餐">已出餐</div>
+    <div data-f="需处理">需处理 2</div>
+    <div data-f="已完成">已完成</div>
+  </div>
+  <div id="ordList"></div>
+</div>
+<!-- 我的 -->
+<div class="pg" id="p_me">
+  <div class="uc-head">
+    <div class="uc-av" id="ucAvt">张</div>
+    <div><div class="un" id="ucName">张店长</div><div class="us" id="ucRole">店长 · 工号 1001</div></div>
+  </div>
+  <div class="uc-list">
+    <div class="uc-item" data-perm="degrade" onclick="tst('b','降级模式切换')"><span class="ui">🚨</span>降级模式<span class="sw" id="swDegrade" onclick="tglDegrade(event)"></span></div>
+    <div class="uc-item" data-perm="setting" onclick="tst('b','深度配置在 PC 后台：按人收费项/桌台/二维码/支付')"><span class="ui">⚙️</span>系统设置<span class="arr">›</span></div>
+    <div class="uc-item" data-perm="report" onclick="goPage('report')"><span class="ui">📊</span>营业报表<span class="arr">›</span></div>
+    <div class="uc-item" data-perm="recon" onclick="goPage('recon')"><span class="ui">⇋</span>多来源对账<span class="arr">›</span></div>
+    <div class="uc-item" data-perm="kds" onclick="tst('b','KDS 大屏为 PC/平板专用，手机端不展示')"><span class="ui">▤</span>KDS 大屏<span class="arr">›</span></div>
+    <div class="uc-item" data-perm="log" onclick="goPage('log')"><span class="ui">◷</span>操作日志<span class="arr">›</span></div>
+  </div>
+  <div class="uc-list">
+    <div class="uc-item" onclick="tst('b','门店：悦点 · 单店')"><span class="ui">🏪</span>门店信息<span class="arr">›</span></div>
+    <div class="uc-item" onclick="doLogout()" style="color:var(--danger)"><span class="ui">🚪</span>退出登录<span class="arr">›</span></div>
+  </div>
+  <div style="text-align:center;color:var(--t3);font-size:11px;padding:14px">商家端小程序 v1 · 配套 PC 后台使用</div>
+</div>
+<!-- 营业报表 -->
+<div class="pg" id="p_report">
+  <div class="sec"><div class="sec-h"><h3>今日报表</h3><span class="more">2026-08-23</span></div>
+    <div class="stats">
+      <div class="stat"><div class="v brand">¥8,642</div><div class="k">营业额</div><div class="d">较昨日 +6.2%</div></div>
+      <div class="stat"><div class="v">93</div><div class="k">订单数</div><div class="d">堂食81·外带12</div></div>
+      <div class="stat"><div class="v">¥92.9</div><div class="k">客单价</div></div>
+      <div class="stat"><div class="v warn">¥1,286</div><div class="k">挂账</div><div class="d">3桌·不计入</div></div>
+    </div>
+  </div>
+  <div class="sec"><div class="sec-h"><h3>渠道分布</h3></div>
+    <div class="todo">
+      <div class="todo-item"><div class="ti-ic">💚</div><div class="ti-c"><div class="ti-t">微信支付 ¥3,975.60</div><div class="ti-s">47 笔 · 占比 46%</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🔵</div><div class="ti-c"><div class="ti-t">支付宝 ¥2,852.05</div><div class="ti-s">34 笔 · 占比 33%</div></div></div>
+      <div class="todo-item"><div class="ti-ic">💵</div><div class="ti-c"><div class="ti-t">现金 ¥1,210.00</div><div class="ti-s">9 笔 · 占比 14% · 差异 −30</div></div></div>
+      <div class="todo-item"><div class="ti-ic">💳</div><div class="ti-c"><div class="ti-t">POS ¥604.85</div><div class="ti-s">3 笔 · 占比 7%</div></div></div>
+    </div>
+  </div>
+  <div class="sec"><div class="sec-h"><h3>时段趋势</h3></div>
+    <div class="todo">
+      <div class="todo-item"><div class="ti-ic">☀️</div><div class="ti-c"><div class="ti-t">午市 11–14 ¥1,820</div><div class="ti-s">22 单 · 21%</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🌤️</div><div class="ti-c"><div class="ti-t">平峰 14–17 ¥640</div><div class="ti-s">8 单</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🌙</div><div class="ti-c"><div class="ti-t">晚市 17–21:30 ¥6,182</div><div class="ti-s">63 单 · 72% · 高峰</div></div></div>
+    </div>
+  </div>
+  <div class="sec"><div class="sec-h"><h3>按人收费项营收</h3></div>
+    <div class="todo">
+      <div class="todo-item"><div class="ti-ic">💺</div><div class="ti-c"><div class="ti-t">餐位费 ¥186.00</div><div class="ti-s">93 人 · ¥2/位 · 必选</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🥢</div><div class="ti-c"><div class="ti-t">餐具费 ¥186.00</div><div class="ti-s">93 人 · ¥2/位</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🧻</div><div class="ti-c"><div class="ti-t">餐巾纸 ¥93.00</div><div class="ti-s">93 人 · ¥1/位</div></div></div>
+    </div>
+  </div>
+</div>
+<!-- 多来源对账 -->
+<div class="pg" id="p_recon">
+  <div class="sec"><div class="sec-h"><h3>多来源对账</h3><span class="more">2026-08-23</span></div></div>
+  <div class="alert r" style="margin:0 14px 12px"><u>⚠</u><div><b>现金差异 −¥30.00 待核对</b>系统 ¥1,210 vs 实盘 ¥1,180，差异未平不建议日结。</div></div>
+  <div class="sec" style="padding-top:0">
+    <div class="todo">
+      <div class="todo-item"><div class="ti-ic">💚</div><div class="ti-c"><div class="ti-t">微信 ¥3,975.60</div><div class="ti-s">渠道流水一致</div></div><span class="tag g">已平</span></div>
+      <div class="todo-item"><div class="ti-ic">🔵</div><div class="ti-c"><div class="ti-t">支付宝 ¥2,852.05</div><div class="ti-s">渠道流水一致</div></div><span class="tag g">已平</span></div>
+      <div class="todo-item"><div class="ti-ic">💵</div><div class="ti-c"><div class="ti-t">现金 ¥1,210 vs ¥1,180</div><div class="ti-s">差异 −30 · 找零错误?</div></div><span class="tag r">待核</span></div>
+      <div class="todo-item"><div class="ti-ic">💳</div><div class="ti-c"><div class="ti-t">POS ¥604.85</div><div class="ti-s">POS 单一致</div></div><span class="tag g">已平</span></div>
+      <div class="todo-item"><div class="ti-ic">⏱</div><div class="ti-c"><div class="ti-t">未结账挂账 ¥1,286.00</div><div class="ti-s">3 桌 · 不计入营业额</div></div><span class="tag o">进行中</span></div>
+      <div class="todo-item"><div class="ti-ic">🎫</div><div class="ti-c"><div class="ti-t">外卖核券 ¥0.00</div><div class="ti-s">美团/饿了么/抖音 · Phase 2</div></div><span class="tag d">未启用</span></div>
+      <div class="todo-item"><div class="ti-ic">📝</div><div class="ti-c"><div class="ti-t">核销损耗 ¥268.00</div><div class="ti-s">跑单 1 笔 · 不计入</div></div><span class="tag d">已记</span></div>
+    </div>
+  </div>
+  <div class="sec"><div class="alert b"><u>ℹ</u><div>当日已收 ¥8,642.50 = 微信+支付宝+现金+POS；挂账与核销单独列示不计入。</div></div></div>
+</div>
+<!-- 操作日志 -->
+<div class="pg" id="p_log">
+  <div class="sec"><div class="sec-h"><h3>操作日志</h3><span class="more">今日 28 条</span></div></div>
+  <div class="sec" style="padding-top:0">
+    <div class="todo">
+      <div class="todo-item"><div class="ti-ic">💳</div><div class="ti-c"><div class="ti-t">A03 结账 ¥246.00（微信）</div><div class="ti-s">张店长 1001 · 18:58</div></div></div>
+      <div class="todo-item"><div class="ti-ic">⚠</div><div class="ti-c"><div class="ti-t">B03 重复扣款转人工处理</div><div class="ti-s">系统 · 18:42</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🚨</div><div class="ti-c"><div class="ti-t">开启降级模式</div><div class="ti-s">张店长 1001 · 18:30</div></div></div>
+      <div class="todo-item"><div class="ti-ic">↩</div><div class="ti-c"><div class="ti-t">A04 退款 ¥48.00（支付宝原路）</div><div class="ti-s">张店长 1001 · 18:22</div></div></div>
+      <div class="todo-item"><div class="ti-ic">⊘</div><div class="ti-c"><div class="ti-t">口水鸡 沽清</div><div class="ti-s">李收银 1003 · 18:10</div></div></div>
+      <div class="todo-item"><div class="ti-ic">🚪</div><div class="ti-c"><div class="ti-t">李收银 1003 登录</div><div class="ti-s">系统 · 17:58</div></div></div>
+    </div>
+  </div>
+</div>
+    </div>
+<!-- 后厨提示页（仅后厨角色登录后显示） -->
+<div class="pg" id="p_kitchen">
+  <div class="empty-p" style="padding:80px 30px">
+    <div class="e">👨‍🍳</div>
+    <b style="font-size:16px;color:var(--t1)">后厨角色</b>
+    <div style="margin:12px 0 22px;color:var(--t2);font-size:13px;line-height:1.6">后厨请使用 <b>PC/平板 KDS 大屏</b> 接单出餐。<br>手机端不提供后厨功能（无权限访问收银/报表/对账）。</div>
+    <button class="btn brand" style="padding:12px 32px" onclick="doLogout()">退出登录</button>
+  </div>
+</div>
+<!-- 桌台详情抽屉 -->
+<div class="dmask" id="dmask">
+  <div class="mask" onclick="closeDraw()"></div>
+  <div class="drw">
+    <div class="dh"><h3 id="drawTitle">桌台</h3><div class="x" onclick="closeDraw()">✕</div></div>
+    <div class="db" id="drawBody"></div>
+    <div class="df" id="drawFoot"></div>
+  </div>
+</div>
+<!-- 结账弹窗 -->
+<div class="mask2" id="payMask">
+  <div class="modal">
+    <h3 id="payTitle">结账</h3>
+    <div class="pay-amt" id="payAmt">¥0.00</div>
+    <div class="alert b" id="payHint"><u>ℹ</u><div>请选择收款方式</div></div>
+    <div id="payOpts">
+      <div class="pay-o on" onclick="pickPay(this)"><div class="pi" style="background:#09BB07">💚</div><div class="pn">微信支付</div><div class="ck"></div></div>
+      <div class="pay-o" onclick="pickPay(this)"><div class="pi" style="background:#1677FF">🔵</div><div class="pn">支付宝</div><div class="ck"></div></div>
+      <div class="pay-o" onclick="pickPay(this)"><div class="pi" style="background:var(--warn)">💵</div><div class="pn">现金</div><div class="ck"></div></div>
+      <div class="pay-o" onclick="pickPay(this)"><div class="pi" style="background:var(--t2)">💳</div><div class="pn">POS 刷卡</div><div class="ck"></div></div>
+    </div>
+    <button class="btn brand block" onclick="doPay()">确认收款</button>
+  </div>
+</div>
+    <div class="tabbar" id="tabbar" style="display:none">
+      <div class="tb on" data-t="dash" onclick="switchTab('dash')">📊 工作台</div>
+      <div class="tb" data-t="tables" onclick="switchTab('tables')">▦ 桌台</div>
+      <div class="tb" data-t="orders" onclick="switchTab('orders')">📋 订单</div>
+      <div class="tb" data-t="me" onclick="switchTab('me')">👤 我的</div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+<script>/* 登录 / 主题 / 路由 */
+var ROLE={n:'张店长',r:'店长 · 工号 1001',a:'张',u:'1001'};
+function pickRole(el,name){
+  document.querySelectorAll('#lgRole div').forEach(function(d){d.classList.remove('on')});
+  el.classList.add('on');
+  var m={'店长':{n:'张店长',r:'店长 · 工号 1001',a:'张',u:'1001',role:'owner'},
+          '收银员':{n:'李收银',r:'收银员 · 工号 1003',a:'李',u:'1003',role:'cashier'},
+          '后厨':{n:'王师傅',r:'后厨 · 工号 2001',a:'王',u:'2001',role:'kitchen'}};
+  ROLE=m[name];document.getElementById('lgU').value='工号 '+ROLE.u;
+}
+function doLogin(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('ucName').textContent=ROLE.n;
+  document.getElementById('ucRole').textContent=ROLE.r;
+  document.getElementById('ucAvt').textContent=ROLE.a;
+  if(ROLE.role==='kitchen'){
+    document.getElementById('tabbar').style.display='none';
+    document.querySelectorAll('.pg').forEach(function(e){e.classList.remove('on')});
+    document.getElementById('p_kitchen').classList.add('on');
+    document.getElementById('navTtl').textContent='后厨';
+    document.getElementById('navBk').style.visibility='hidden';
+    tst('b','后厨角色请使用 PC/平板 KDS 大屏');
+    return;
+  }
+  document.getElementById('tabbar').style.display='flex';
+  renderTables();renderOrders();
+  applyPermission();
+  switchTab('dash');
+  tst('g','登录成功，欢迎 '+ROLE.n+'（'+({owner:'店长',cashier:'收银员'}[ROLE.role])+'权限）');
+}
+function doLogout(){if(!confirm('确认退出登录？'))return;document.getElementById('login').style.display='flex';document.getElementById('tabbar').style.display='none';}
+function toggleTheme(){var h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('navTheme').textContent=d?'☀':'☾';}
+var _t;
+function tst(){var m=arguments.length>1?arguments[1]:arguments[0];var e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(_t);_t=setTimeout(function(){e.classList.remove('show')},1600);}
+function tick(){var n=new Date();document.getElementById('clk').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+setInterval(tick,1000);tick();
+function switchTab(t){
+  ['dash','tables','orders','me'].forEach(function(p){var e=document.getElementById('p_'+p);if(e)e.classList.toggle('on',p===t);});
+  document.querySelectorAll('.tabbar .tb').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-t')===t);});
+  document.getElementById('navTtl').textContent={dash:'工作台',tables:'桌台图',orders:'订单管理',me:'我的'}[t];
+  document.getElementById('navBk').style.visibility=t==='dash'?'hidden':'visible';
+  if(t==='orders')renderOrders();
+  if(t==='tables')renderTables();
+}
+function goPage(p){
+  var role=ROLE.role||'cashier';
+  var perms={owner:{report:1,recon:1,log:1},cashier:{report:1,recon:0,log:0},kitchen:{}};
+  if(!(perms[role]&&perms[role][p])){tst('r','无权限访问该功能');return;}
+  document.querySelectorAll('.pg').forEach(function(e){e.classList.remove('on')});
+  document.getElementById('p_'+p).classList.add('on');
+  document.getElementById('tabbar').style.display='none';
+  document.getElementById('navBk').style.visibility='visible';
+  document.getElementById('navTtl').textContent={report:'营业报表',recon:'多来源对账',log:'操作日志'}[p]||'';
+}
+function applyPermission(){
+  var role=ROLE.role||'cashier';
+  var perms={owner:{report:1,recon:1,log:1,kds:1,setting:1,degrade:1},
+              cashier:{report:1,recon:0,log:0,kds:0,setting:0,degrade:0},
+              kitchen:{report:0,recon:0,log:0,kds:1,setting:0,degrade:0}};
+  var p=perms[role]||{};
+  document.querySelectorAll('#p_me .uc-item[data-perm]').forEach(function(it){
+    it.style.display=p[it.getAttribute('data-perm')]?'flex':'none';
+  });
+}
+function navBack(){
+  var sub=['report','recon','log'];
+  for(var i=0;i<sub.length;i++){if(document.getElementById('p_'+sub[i]).classList.contains('on')){switchTab('me');return;}}
+  if(!document.getElementById('p_dash').classList.contains('on'))switchTab('dash');
+}
+
+/* 桌台数据 */
+var TABLES=[
+ {no:'A01',z:'A',seat:4,pos:'进门左侧第1桌',mode:'prepay',st:'empty'},
+ {no:'A02',z:'A',seat:2,pos:'窗边第2桌',mode:'prepay',st:'dining',amt:168,open:'18:28',ppl:2,ch:'现金'},
+ {no:'A03',z:'A',seat:4,pos:'窗边第3桌',mode:'prepay',st:'dining',amt:246,open:'18:52',ppl:3,ch:'微信'},
+ {no:'A04',z:'A',seat:4,pos:'窗边第4桌',mode:'frontend',st:'empty'},
+ {no:'A05',z:'A',seat:6,pos:'靠柱子',mode:'prepay',st:'dining',amt:286,open:'18:35',ppl:5,ch:'现金'},
+ {no:'A06',z:'A',seat:4,pos:'中间区',mode:'prepay',st:'clean',open:'19:02'},
+ {no:'A07',z:'A',seat:2,pos:'角落',mode:'prepay',st:'empty'},
+ {no:'A08',z:'A',seat:4,pos:'靠吧台',mode:'postpay',st:'unpaid',amt:268,open:'17:48',ppl:4,note:'跑单已核销'},
+ {no:'B01',z:'B',seat:8,pos:'梅花厅',mode:'postpay',st:'empty'},
+ {no:'B02',z:'B',seat:10,pos:'牡丹厅·靠楼梯',mode:'postpay',st:'unpaid',amt:1286,open:'17:42',ppl:9,lock:1},
+ {no:'B03',z:'B',seat:12,pos:'兰花厅',mode:'postpay',st:'dining',amt:648,open:'18:15',ppl:10,ch:'微信'},
+ {no:'B04',z:'B',seat:8,pos:'竹韵厅',mode:'postpay',st:'empty'},
+ {no:'B05',z:'B',seat:6,pos:'菊香厅',mode:'postpay',st:'merged',amt:420,open:'18:40',ppl:6,note:'与B06并桌'},
+ {no:'B06',z:'B',seat:6,pos:'荷风厅',mode:'postpay',st:'merged',amt:0,open:'18:40',note:'主桌B05'},
+ {no:'C01',z:'C',seat:4,pos:'遮阳伞下·靠栏杆',mode:'prepay',st:'dining',amt:132,open:'18:58',ppl:2,ch:'支付宝'},
+ {no:'C02',z:'C',seat:4,pos:'露台中间',mode:'prepay',st:'empty'},
+ {no:'C03',z:'C',seat:6,pos:'露台角落',mode:'frontend',st:'unpaid',amt:88,open:'19:04',ppl:4,note:'仅点单·前台结'},
+ {no:'C04',z:'C',seat:2,pos:'露台边座',mode:'prepay',st:'empty'}
+];
+var STN={empty:'空闲',dining:'就餐中',unpaid:'未结账',clean:'待清台',merged:'并桌'};
+var STC={empty:'d',dining:'b',unpaid:'r',clean:'o',merged:'d'};
+var curZone='all';
+function renderTables(){
+  var zt=document.getElementById('zoneTabs');
+  zt.querySelectorAll('div').forEach(function(d){d.classList.toggle('on',d.getAttribute('data-z')===curZone);});
+  var list=TABLES.filter(function(t){return curZone==='all'||t.z===curZone});
+  document.getElementById('tbGrid').innerHTML=list.map(function(t){
+    var mc=t.mode==='postpay'?'post':(t.mode==='frontend'?'front':'pre');
+    var mname=t.mode==='postpay'?'后付':(t.mode==='frontend'?'前台结':'先付');
+    var amt=t.st==='empty'?'<div class="tb-a zero">空闲</div>':(t.st==='clean'?'<div class="tb-a zero">待清台</div>':'<div class="tb-a">¥'+(t.amt||0).toFixed(0)+'</div>');
+    var sub=t.st==='empty'?'<div class="tb-b">'+t.pos+'</div>':'<div class="tb-b">'+(t.ppl?t.ppl+'人 · ':'')+(t.open||'')+(t.note?'<br>'+t.note:'')+'</div>';
+    return '<div class="tb '+t.st+(t.lock?' locked':'')+'" onclick="openTable(\''+t.no+'\')">'+
+      '<div class="tb-h"><span class="tb-n">'+t.no+'</span><span class="tb-m '+mc+'">'+mname+'</span></div>'+
+      sub+amt+
+      '<div class="tb-f"><span class="tag '+STC[t.st]+'">'+STN[t.st]+'</span>'+(t.ch?'<span class="tag d">'+t.ch+'</span>':'')+'</div></div>';
+  }).join('');
+}
+document.getElementById('zoneTabs').addEventListener('click',function(e){var d=e.target.closest('div');if(!d)return;curZone=d.getAttribute('data-z');renderTables();});
+function openTable(no){
+  var t=TABLES.filter(function(x){return x.no===no})[0];if(!t)return;
+  var mname=t.mode==='postpay'?'后付统一结账':(t.mode==='frontend'?'仅点单·前台结':'先付后吃');
+  document.getElementById('drawTitle').textContent=t.no+' · '+t.pos;
+  var b=document.getElementById('drawBody'),f=document.getElementById('drawFoot');
+  var badge='<span class="tag '+STC[t.st]+'">'+STN[t.st]+'</span>';
+  if(t.st==='empty'){
+    b.innerHTML='<div class="alert b"><u>ℹ</u><div>该桌空闲，可开台接待新客。</div></div><dl class="kv" style="margin-top:14px"><dt>区域</dt><dd>'+({A:'大厅靠窗',B:'包间二楼',C:'露台'}[t.z])+'</dd><dt>座位</dt><dd>'+t.seat+' 座</dd><dt>结账模式</dt><dd>'+mname+'</dd></dl>';
+    f.innerHTML='<button class="btn ghost" onclick="closeDraw()">关闭</button><button class="btn brand" onclick="tst(\'g\',\''+t.no+' 已开台\');closeDraw()">开台</button>';
+    openDraw();return;
+  }
+  if(t.st==='clean'){
+    b.innerHTML='<div class="alert o"><u>⚠</u><div>顾客已离店，等待清台。清台后可接待新客。</div></div><dl class="kv" style="margin-top:14px"><dt>状态</dt><dd>'+badge+'</dd><dt>离店时间</dt><dd class="mono">'+t.open+'</dd><dt>结账</dt><dd><span class="tag g">已结清</span></dd></dl>';
+    f.innerHTML='<button class="btn ghost" onclick="closeDraw()">关闭</button><button class="btn brand" onclick="cleanTable(\''+t.no+'\')">确认清台</button>';
+    openDraw();return;
+  }
+  var lockTip=t.lock?'<div class="alert r"><u>🔒</u><div><b>会话已锁定（结账中）</b>锁定期间禁止加菜。</div></div>':'';
+  var unpaidTip=(t.st==='unpaid'&&t.amt>0)?'<div class="alert o"><u>⚠</u><div><b>未结账挂账 ¥'+t.amt.toFixed(2)+'</b>不计入营业额，清台前必须结账或店长核销。</div></div>':'';
+  var items='<div class="dlist"><div class="li"><span>宫保鸡丁 ×2</span><span class="p">¥96</span></div><div class="li"><span>水煮牛肉 ×1</span><span class="p">¥68</span></div><div class="li"><span>麻婆豆腐 ×1</span><span class="p">¥32</span></div><div class="li"><span>米饭 ×'+(t.ppl||4)+'</span><span class="p">¥'+((t.ppl||4)*3)+'</span></div><div class="li"><span>💺 餐位费 ×'+(t.ppl||4)+'</span><span class="p">¥'+((t.ppl||4)*2)+'</span></div></div>';
+  b.innerHTML=lockTip+unpaidTip+'<dl class="kv"><dt>状态</dt><dd>'+badge+'</dd><dt>结账模式</dt><dd>'+mname+'</dd><dt>开台</dt><dd class="mono">'+t.open+'</dd><dt>人数</dt><dd>'+(t.ppl||'—')+' 人</dd>'+(t.ch?'<dt>已收</dt><dd><span class="tag g">'+t.ch+'</span></dd>':'')+'<dt>'+(t.st==='unpaid'?'挂账':'已消费')+'</dt><dd><b style="font-size:18px;color:'+(t.st==='unpaid'?'var(--danger)':'var(--t1)')+'">¥'+(t.amt||0).toFixed(2)+'</b></dd></dl>'+items;
+  var pay=(t.st==='unpaid'&&t.amt>0)?'<button class="btn brand" onclick="closeDraw();payTable(\''+t.no+'\')">'+(t.mode==='frontend'?'前台结账收款':'结账收款')+'</button>':'<button class="btn brand" onclick="tst(\'g\',\'已加菜推送后厨\')">加菜</button>';
+  f.innerHTML='<button class="btn ghost" onclick="tst(\'b\',\'转台/并桌\')">转台</button><button class="btn ghost" onclick="tst(\'b\',\'代客点单\')">代点</button>'+pay;
+  openDraw();
+}
+function openDraw(){document.getElementById('dmask').classList.add('on');}
+function closeDraw(){document.getElementById('dmask').classList.remove('on');}
+function cleanTable(no){var t=TABLES.filter(function(x){return x.no===no})[0];t.st='empty';delete t.amt;delete t.ppl;delete t.open;delete t.ch;delete t.note;renderTables();closeDraw();tst('g',no+' 已清台');}
+
+/* 结账 */
+var __payNo;
+function payTable(no){var t=TABLES.filter(function(x){return x.no===no})[0];__payNo=no;
+  document.getElementById('payTitle').textContent=(t.mode==='frontend'?'前台结账 · ':'结账 · ')+no+' '+t.pos;
+  document.getElementById('payAmt').textContent='¥'+t.amt.toFixed(2);
+  document.getElementById('payHint').innerHTML='<u>ℹ</u><div>应收 ¥'+t.amt.toFixed(2)+'，'+(t.mode==='frontend'?'仅点单台·前台收银':(t.mode==='postpay'?'后付·会话结账':'先付台补收'))+'</div>';
+  document.getElementById('payMask').classList.add('on');
+}
+function pickPay(el){document.querySelectorAll('#payOpts .pay-o').forEach(function(d){d.classList.remove('on')});el.classList.add('on');}
+function doPay(){var ch=document.querySelector('#payOpts .pay-o.on .pn').textContent;var t=TABLES.filter(function(x){return x.no===__payNo})[0];document.getElementById('payMask').classList.remove('on');tst('g',__payNo+' 结账成功 ¥'+t.amt.toFixed(2)+'（'+ch+'）');t.st='clean';t.ch=ch;delete t.lock;renderTables();closeDraw();}
+
+/* 订单 */
+var ORDERS=[
+ {id:'0093',t:'A03',amt:246,mode:'先付',ch:'微信',src:'线上扫码',st:'备餐中',stc:'b',tm:'18:58',items:[{n:'宫保鸡丁',q:2,p:48},{n:'蒜蓉油麦菜',q:1,p:26},{n:'米饭',q:3,p:2},{n:'口水鸡',q:1,p:38},{n:'💺 餐位费',q:3,p:2}]},
+ {id:'0092',t:'B02',amt:1286,mode:'后付',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'18:56',items:[{n:'水煮牛肉',q:2,p:68},{n:'宫保鸡丁',q:2,p:48},{n:'麻婆豆腐',q:1,p:32},{n:'夫妻肺片',q:1,p:36},{n:'米饭',q:9,p:2},{n:'💺 餐位费',q:9,p:2}]},
+ {id:'0091',t:'A08',amt:151,mode:'先付',ch:'现金',src:'人工补录',st:'已完成',stc:'g',tm:'18:54',items:[{n:'蛋炒饭',q:2,p:22},{n:'紫菜蛋花汤',q:1,p:18},{n:'米饭',q:2,p:2}]},
+ {id:'0090',t:'C02',amt:132,mode:'先付',ch:'支付宝',src:'线上扫码',st:'已出餐',stc:'g',tm:'18:51',items:[{n:'水煮牛肉',q:1,p:68},{n:'拍黄瓜',q:1,p:16},{n:'米饭',q:2,p:2},{n:'💺 餐位费',q:2,p:2}]},
+ {id:'0089',t:'B03',amt:648,mode:'后付',ch:'—',src:'员工代点',st:'未结账',stc:'r',tm:'18:47',items:[{n:'宫保鸡丁',q:3,p:48},{n:'水煮牛肉',q:2,p:68},{n:'酸辣汤',q:2,p:24},{n:'米饭',q:10,p:2},{n:'💺 餐位费',q:10,p:2}]},
+ {id:'0088',t:'A05',amt:286,mode:'先付',ch:'现金',src:'人工补录',st:'已完成',stc:'g',tm:'18:35',items:[{n:'水煮牛肉',q:1,p:68},{n:'宫保鸡丁',q:2,p:48},{n:'米饭',q:5,p:2}]},
+ {id:'0087',t:'A04',amt:48,mode:'先付',ch:'支付宝',src:'线上扫码',st:'已退款',stc:'d',tm:'18:22',items:[{n:'蛋炒饭',q:1,p:22},{n:'酸辣汤',q:1,p:24}]},
+ {id:'0086',t:'B03',amt:328,mode:'后付',ch:'微信×2',src:'线上扫码',st:'需处理',stc:'r',tm:'18:42',items:[{n:'宫保鸡丁',q:2,p:48},{n:'水煮牛肉',q:1,p:68},{n:'米饭',q:5,p:2}]},
+ {id:'0085',t:'B05',amt:420,mode:'后付',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'18:40',items:[{n:'水煮牛肉',q:2,p:68},{n:'口水鸡',q:2,p:38},{n:'米饭',q:6,p:2},{n:'💺 餐位费',q:6,p:2}]},
+ {id:'0084',t:'C03',amt:88,mode:'前台结',ch:'—',src:'线上扫码',st:'未结账',stc:'r',tm:'19:04',items:[{n:'宫保鸡丁',q:1,p:48},{n:'米饭',q:2,p:2},{n:'💺 餐位费',q:2,p:2}]}
+];
+var curFilt='all';
+function renderOrders(){
+  var list=ORDERS.filter(function(o){return curFilt==='all'||o.st===curFilt});
+  document.getElementById('ordFilt').querySelectorAll('div').forEach(function(d){d.classList.toggle('on',d.getAttribute('data-f')===curFilt);});
+  var b=document.getElementById('ordList');
+  if(!list.length){b.innerHTML='<div class="empty-p"><div class="e">📋</div>无此类订单</div>';return;}
+  b.innerHTML=list.map(function(o){
+    var chTag=o.ch==='—'?'<span class="tag d">未收款</span>':'<span class="tag '+(o.ch.indexOf('微信')>-1?'g':o.ch.indexOf('支付宝')>-1?'b':o.ch==='现金'?'o':'d')+'">'+o.ch+'</span>';
+    var act=o.st==='未结账'?'<button class="btn brand" onclick="switchTab(\'tables\')">结账</button>':o.st==='需处理'?'<button class="btn dan" onclick="tst(\'r\',\'已转人工处理队列\')">处理</button>':'<button class="btn ghost" onclick="tst(\'b\',\'已重打小票\')">重打</button>';
+    var foods=(o.items||[]).map(function(f){return '<div class="o-food"><span>'+f.n+' ×'+f.q+'</span><span class="p">¥'+(f.p*f.q).toFixed(2)+'</span></div>';}).join('');
+    return '<div class="o-card"><div class="o-h"><span class="o-no">#'+o.id+' · '+o.t+' 桌</span><span class="o-st '+o.stc+'">'+o.st+'</span></div><div class="o-row"><span class="l">金额</span><span class="amt">¥'+o.amt.toFixed(2)+'</span></div><div class="o-row"><span class="l">模式 / 渠道</span><span><span class="tag '+(o.mode==='后付'?'o':(o.mode==='前台结'?'b':'g'))+'">'+o.mode+'</span> '+chTag+'</span></div><div class="o-row"><span class="l">来源 / 时间</span><span style="color:var(--t2);font-size:12px">'+o.src+' · '+o.tm+'</span></div><div class="o-foods-toggle" onclick="toggleFoods(this)">▾ 查看菜品 ('+(o.items||[]).length+')</div><div class="o-foods">'+foods+'</div><div class="o-f">'+act+'</div></div>';
+  }).join('');
+}
+function toggleFoods(el){var f=el.nextElementSibling;f.classList.toggle('show');el.textContent=f.classList.contains('show')?'▴ 收起菜品':'▾ 查看菜品 ('+f.children.length+')';}
+function filterOrders(f){curFilt=f;renderOrders();}
+document.getElementById('ordFilt').addEventListener('click',function(e){var d=e.target.closest('div');if(!d)return;curFilt=d.getAttribute('data-f');renderOrders();});
+
+/* 降级 */
+function tglDegrade(e){e.stopPropagation();var sw=document.getElementById('swDegrade');sw.classList.toggle('on');var on=sw.classList.contains('on');var b=document.getElementById('bizBanner');
+  if(on){b.className='banner r';b.innerHTML='<i>🔴</i><span>降级模式运行中 · 扫码点餐已关闭，转人工收银</span>';tst('r','降级模式已开启');}
+  else{b.className='banner';b.innerHTML='<i>🟢</i><span>晚市营业中 · 17:00–21:30</span>';tst('g','降级模式已关闭');}}</script>
+</body>
+</html>

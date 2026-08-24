@@ -1,0 +1,9 @@
+# 凭据绝不入库（设计 12.6，根级兜底；server/ 内另有 .gitignore 复述）
+.env
+certs/
+*.pem
+*.key
+
+# 本地杂项
+.DS_Store
+*.sw?
