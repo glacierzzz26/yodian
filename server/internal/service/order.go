@@ -323,6 +323,64 @@ func (s *OrderService) ChangeOrderStatus(ctx context.Context, orderID, operatorI
 	return nil
 }
 
+// CashierPayResp 代客收款响应
+type CashierPayResp struct {
+	OrderID     int64  `json:"order_id"`
+	Channel     string `json:"channel"`
+	AmountCents int64  `json:"amount_cents"`
+	Status      string `json:"status"`
+}
+
+// CashierPay POST /admin/orders/:id/cashier-pay：代客现金/POS 收款（先付桌台即时收款，
+// 钱在前台收，不走支付网关回调，与 BillPay 同口径）。幂等：仅 pending→paid，重复收款被拒。
+func (s *OrderService) CashierPay(ctx context.Context, orderID, operatorID int64, channel string) (*CashierPayResp, *respond.BizErr) {
+	if channel != "cash" && channel != "pos" && channel != "scan" {
+		return nil, respond.ErrBadRequest.WithMsg("入账渠道仅支持 cash/pos/scan")
+	}
+	var o model.Order
+	if err := s.db.First(&o, "shop_id = ? AND id = ?", s.shopID, orderID).Error; err != nil {
+		return nil, respond.NewBiz(20012, "订单不存在", 200)
+	}
+	if o.PayMode != "prepay" {
+		return nil, respond.NewBiz(20013, "仅先付订单支持代客收款，后付走会话结账", 200)
+	}
+	if bizErr := AssertTransition(o.PayMode, o.Status, "paid"); bizErr != nil {
+		return nil, respond.NewBiz(20013, fmt.Sprintf("订单状态不可收款: %s", o.Status), 200)
+	}
+
+	outTradeNo := genNo("CP")
+	now := time.Now()
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.Order{}).Where("id = ?", o.ID).
+			Updates(map[string]any{
+				"status": "paid", "paid_at": now,
+				"pay_channel": channel, "paid_amount": o.TotalAmount,
+			}).Error; err != nil {
+			return err
+		}
+		pm := model.Payment{
+			OrderID: &o.ID, OutTradeNo: outTradeNo, Channel: channel,
+			Amount: o.TotalAmount, Status: "success",
+		}
+		return tx.Create(&pm).Error
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, respond.NewBiz(20010, "该订单已收款，请勿重复", 200)
+		}
+		slog.Error("cashier pay tx failed", "err", err, "order_id", o.ID)
+		return nil, respond.ErrInternal
+	}
+
+	s.enqueuePrint(ctx, o.ID, nil)
+	s.push("order.paid", map[string]any{
+		"order_id": o.ID, "table_id": o.TableID, "session_id": o.SessionID,
+		"amount_cents": int64(o.TotalAmount), "channel": channel, "operator": operatorID,
+	})
+	slog.Info("cashier pay", "order_id", o.ID, "channel", channel, "operator", operatorID)
+	return &CashierPayResp{OrderID: o.ID, Channel: channel, AmountCents: int64(o.TotalAmount), Status: "paid"}, nil
+}
+
 // SessionOrderItem 会话订单行（阶段 3 顾客端展示）
 type SessionOrderItem struct {
 	Name     string  `json:"name"`

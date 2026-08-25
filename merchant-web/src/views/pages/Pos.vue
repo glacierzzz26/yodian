@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { fetchDishes, fetchTableAreas } from '@/api/mock'
+import { fetchDishes, fetchTableAreas, submitOfflineOrder, cashierPay } from '@/api/mock'
 import type { Dish, PayChannel, TableArea, TableInfo } from '@/types'
 
 const dishes = ref<Dish[]>([])
@@ -86,15 +86,37 @@ function openPayModal() {
   payOpen.value = true
 }
 
-function submitOrder() {
+// 代客收款渠道映射：微信/支付宝 = 扫顾客付款码（scan），现金/POS 直收
+const CH: Record<string, 'cash' | 'pos' | 'scan'> = { wechat: 'scan', alipay: 'scan', cash: 'cash', pos: 'pos' }
+const CH_LABEL: Record<string, string> = { wechat: '扫码（微信）', alipay: '扫码（支付宝）', cash: '现金', pos: 'POS' }
+
+async function submitOrder() {
   const lineDesc = cart.value.map((l) => `${l.dish.name}×${l.qty}`).join('、')
-  const where = selTable.value ? `${selTable.value.tableNo}（${selTable.value.area}）` : '外带'
   payOpen.value = false
-  message.success(
-    `${where} ${modeLabel.value}下单成功（模拟）· ${lineDesc} · ¥${total.value.toFixed(2)}` +
-    (payMode.value === 'postpay' ? ' · 已挂账，清台前统一结账' : ` · 已收 ${payChannel.value === 'wechat' ? '微信支付' : payChannel.value === 'alipay' ? '支付宝' : payChannel.value === 'cash' ? '现金' : 'POS'} ¥${total.value.toFixed(2)}`),
-  )
-  cart.value = []
+  if (!selTable.value) {
+    message.warning('外带自取后端未支持（联调取舍），请先选择桌台')
+    return
+  }
+  if (!cart.value.length) { message.warning('请先选择菜品'); return }
+  try {
+    const where = `${selTable.value.tableNo}（${selTable.value.area}）`
+    // 后端按 pax 自动计入按人项（餐位费等），Pos 清单不再带 per_head 行
+    const pax = cart.value.filter((l) => l.dish.itemType === 'per_head').reduce((s, l) => s + l.qty, 0) || 2
+    const resp = await submitOfflineOrder({
+      tid: selTable.value.id,
+      pax,
+      items: cart.value.filter((l) => l.dish.itemType !== 'per_head').map((l) => ({ dish_id: l.dish.id, qty: l.qty, remark: l.remark })),
+    })
+    if (payMode.value === 'postpay') {
+      message.success(`${where} 后付挂账下单成功 · ${lineDesc} · ¥${resp.total.toFixed(2)} · 清台前统一结账`)
+    } else {
+      await cashierPay(resp.orderId, CH[payChannel.value] || 'cash')
+      message.success(`${where} 先付下单并收款成功 · ${lineDesc} · ${CH_LABEL[payChannel.value] || '收款'} ¥${resp.total.toFixed(2)}`)
+    }
+    cart.value = []
+  } catch (e) {
+    message.error((e as Error).message || '下单失败')
+  }
 }
 </script>
 

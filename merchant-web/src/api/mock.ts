@@ -1,19 +1,398 @@
 import type {
   DashboardStats, TableArea, Order, ServiceCall, PrintTask, Dish,
-  Staff, OpLog, BackupTask, RefundReq, ReconRow,
+  Staff, OpLog, BackupTask, RefundReq, ReconRow, PayMode, PayChannel,
 } from '@/types'
+import { http } from '@/api/http'
 
 /**
- * mock 数据层：契约与设计方案 7.4/16.1 对齐。
- * 后端就绪后，把这里的函数体替换为 http 调用（见 http.ts），页面无需改动。
- * 数据诚实：未实现的能力返回空态，不造假。
+ * 数据层（阶段 4.1 联调）：核心闭环视图走真实后端 http（契约 7.4/16.1），
+ * 金额由适配层统一「分 → 元」，视图数据逻辑不动。
+ * 管理配置类视图（dashboard/manual/打印/员工/备份/补录单）仍走 mock，标注「联调未覆盖」。
+ *
+ * 诚实取舍（与 4-1.md 归档一致）：
+ * - 并桌 merged 恒 false；档口 station=''/单位 unit='份'/item_type='dish' 为后端默认值；
+ * - Order.sessionId 后端列表未返回，置 0（视图未消费）；
+ * - KDS area 后端厨房端点未返回，置 ''（视图仅展示）；外带 TID=0 后端不支持。
  */
+
+/* ---------------- 工具 ---------------- */
 
 function delay<T>(data: T, ms = 200): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms))
 }
 
-/* ---------------- 营业概览 ---------------- */
+function fmtDT(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// 后端 specs 为 JSON（可能是数组 / 字符串 / null），统一为展示字符串
+function normSpecs(specs: unknown): string | undefined {
+  if (specs == null) return undefined
+  if (Array.isArray(specs)) return specs.map(String).join('、')
+  if (typeof specs === 'object') {
+    try { return JSON.stringify(specs) } catch { return undefined }
+  }
+  return String(specs)
+}
+
+/* ---------------- 真实 API：后端 DTO 形状（金额一律分，4.1 归档） ---------------- */
+
+interface ApiTableSession { session_id: number; pay_mode: string; unsettled_cents: number; locked_for_bill: boolean; merged: boolean; pax: number }
+interface ApiTable { id: number; table_no: string; area_id: number | null; seats: number; pay_mode: PayMode; status: 'empty' | 'occupied'; session?: ApiTableSession | null; wait_clean: boolean }
+interface ApiTableArea { id: number; name: string; zone_label: string; table_label: string; default_pay_mode?: string | null; tables: ApiTable[] }
+
+interface ApiOrderItem { id: number; name: string; specs?: unknown; remark?: string | null; qty: number; price_cents: number; item_type: string; is_served: boolean; is_refunded: boolean }
+interface ApiOrder {
+  id: number; no?: string | null; table_no?: string | null; area?: string | null; pay_mode: PayMode;
+  source: string; pay_channel?: string | null; status: string; total_amount_cents: number;
+  paid_amount_cents?: number | null; created_at: string; remark?: string | null; items: ApiOrderItem[];
+}
+
+interface ApiDish { id: number; name: string; category_name: string; price_cents: number; is_sold_out: boolean; specs?: unknown; unit: string; item_type: string; station: string }
+interface ApiKitchenItem { id: number; name: string; specs?: unknown; qty: number }
+interface ApiKitchenOrder { id: number; no?: string | null; table_no?: string | null; pay_mode: PayMode; status: string; created_at: string; station: string; items: ApiKitchenItem[] }
+
+interface ApiRefund {
+  id: number; order_no?: string | null; table_no?: string | null; amount_cents: number; reason?: string | null;
+  channel: string; status: string; requested_by?: string | null; requested_at: string; handled_by?: string | null; handled_at?: string | null;
+}
+
+interface ApiLog { id: number; action: string; target_type?: string | null; target_id?: number | null; detail?: unknown; created_at: string; operator_name?: string | null; role?: string | null }
+
+interface ApiRecon {
+  order_receivable: number; bill_receivable: number; total_receivable: number; payment_paid: number;
+  payment_by_channel?: Record<string, number>; refunded: number; net_receipt: number;
+  unsettled_amount: number; unsettled_orders: number; pending_bills: number; written_off_amount: number;
+  manual_orders: number; order_count: number; order_by_status?: Record<string, number>; diff: number;
+}
+
+/* ---------------- 桌台图 ---------------- */
+export async function fetchTableAreas(): Promise<TableArea[]> {
+  const data = (await http.get('/admin/tables')) as { areas: ApiTableArea[] }
+  return (data.areas || []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    zoneLabel: a.zone_label || a.name,
+    tableLabel: a.table_label || '',
+    defaultPayMode: a.default_pay_mode === 'postpay' ? 'postpay' : 'prepay',
+    tables: (a.tables || []).map((t) => ({
+      id: t.id,
+      tableNo: t.table_no,
+      area: a.name,
+      zone: a.name,
+      seats: t.seats,
+      payMode: t.pay_mode,
+      status: t.status,
+      session: t.session
+        ? {
+            sessionId: t.session.session_id,
+            payMode: t.session.pay_mode as PayMode,
+            unsettled: t.session.unsettled_cents / 100,
+            lockedForBill: t.session.locked_for_bill,
+            merged: t.session.merged, // 后端无并桌，恒 false
+            pax: t.session.pax,
+          }
+        : undefined,
+      waitClean: t.wait_clean,
+    })),
+  }))
+}
+
+/* ---------------- 订单管理 ---------------- */
+export async function fetchOrders(): Promise<Order[]> {
+  const data = (await http.get('/admin/orders')) as { total: number; items: ApiOrder[] }
+  return (data.items || []).map((o) => ({
+    id: o.id,
+    no: o.no || `OD${o.id}`,
+    tableNo: o.table_no || '',
+    area: o.area || '',
+    sessionId: 0, // 后端订单列表未返回 session_id，视图未消费
+    payMode: o.pay_mode,
+    source: o.source === 'online' ? 'online' : 'offline', // cashier 补录单按「人工」展示
+    payChannel: (o.pay_channel as PayChannel) || '',
+    status: o.status,
+    totalAmount: o.total_amount_cents / 100,
+    paidAmount: (o.paid_amount_cents ?? 0) / 100,
+    createdAt: fmtDT(o.created_at),
+    remark: o.remark || undefined,
+    items: (o.items || []).map((it) => ({
+      id: it.id,
+      name: it.name,
+      specs: normSpecs(it.specs),
+      remark: it.remark || undefined,
+      qty: it.qty,
+      price: it.price_cents / 100,
+      itemType: it.item_type === 'per_head' ? 'per_head' : 'dish',
+      isServed: it.is_served,
+      isRefunded: it.is_refunded,
+    })),
+  }))
+}
+
+/* ---------------- 需人工处理（联调未覆盖，仍 mock） ---------------- */
+function mkOrder(
+  id: number, tableNo: string, payMode: 'prepay' | 'postpay', status: string,
+  payChannel: string, totalAmount: number, remark: string,
+  items: { name: string; qty: number; price: number }[],
+): Order {
+  return {
+    id, no: `OD${String(202608240000 + id)}`, tableNo, area: '大厅', sessionId: 1000 + id,
+    payMode, source: 'online', payChannel: payChannel as never, status,
+    totalAmount, paidAmount: ['paid', 'preparing', 'served'].includes(status) ? totalAmount : 0,
+    createdAt: `2026-08-24 18:${String(10 + id).padStart(2, '0')}`, remark,
+    items: items.map((it, i) => ({ id: i + 1, name: it.name, qty: it.qty, price: it.price, itemType: 'dish', isServed: false, isRefunded: false })),
+  }
+}
+
+export function fetchManualOrders(): Promise<Order[]> {
+  return delay([
+    { ...mkOrder(31, 'A09', 'prepay', 'manual', 'wechat', 210, '重复扣款 · 已收到两笔成功回调', []), manualState: 'pending', items: [{ id: 1, name: '锅包肉', qty: 1, price: 52, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 2, price: 6, itemType: 'dish', isServed: false, isRefunded: false }] },
+    { ...mkOrder(32, 'B08', 'postpay', 'manual', 'alipay', 358, '金额不符 · 回调金额 350 与账单 358 不一致', []), manualState: 'handling', items: [{ id: 1, name: '烤羊排', qty: 1, price: 128, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '啤酒', qty: 6, price: 30, itemType: 'dish', isServed: false, isRefunded: false }] },
+    { ...mkOrder(33, 'A01', 'prepay', 'manual', 'cash', 96, '支付失败 · 顾客现金未找到支付记录', []), manualState: 'done', items: [{ id: 1, name: '口水鸡', qty: 1, price: 38, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '酸辣土豆丝', qty: 1, price: 18, itemType: 'dish', isServed: false, isRefunded: false }] },
+  ])
+}
+
+/* ---------------- 呼叫服务员（联调未覆盖，仍 mock） ---------------- */
+export function fetchServiceCalls(): Promise<ServiceCall[]> {
+  return delay([
+    { id: 1, tableNo: 'A06', reason: '加水', createdAt: '18:24', status: 'pending' },
+    { id: 2, tableNo: 'B02', reason: '结账', createdAt: '18:26', status: 'pending' },
+    { id: 3, tableNo: 'C03', reason: '加餐具', createdAt: '18:10', status: 'done' },
+  ])
+}
+export function resolveServiceCall(_id: number): Promise<void> {
+  // TODO(phase2): POST /admin/service-calls/:id/resolve
+  return delay(undefined, 100)
+}
+
+/* ---------------- 打印任务（联调未覆盖，仍 mock） ---------------- */
+export function fetchPrintTasks(): Promise<PrintTask[]> {
+  return delay([
+    { id: 1, station: '热菜档', printerSn: 'FE-8021', kind: '下单小票 · A05', status: 'failed', retryCount: 3, createdAt: '18:22' },
+    { id: 2, station: '凉菜档', printerSn: 'FE-8022', kind: '下单小票 · B01', status: 'sent', retryCount: 0, createdAt: '18:20' },
+    { id: 3, station: '吧台', printerSn: 'FE-8023', kind: '结账小票 · B04', status: 'sent', retryCount: 0, createdAt: '18:15' },
+  ])
+}
+export function reprint(_taskId: number): Promise<void> {
+  // TODO(phase2): POST /admin/print-tasks/:id/reprint
+  return delay(undefined, 100)
+}
+
+/* ---------------- 菜品（代客点单/沽清，真实） ---------------- */
+export async function fetchDishes(): Promise<Dish[]> {
+  const data = (await http.get('/admin/dishes')) as { items: ApiDish[] }
+  return (data.items || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    category: d.category_name || '未分类',
+    price: d.price_cents / 100,
+    unit: d.unit || '份',
+    itemType: d.item_type === 'per_head' ? 'per_head' : 'dish',
+    soldOut: d.is_sold_out,
+    status: 'on', // 后端菜品无上/下架字段，恒 on（诚实）
+    specs: (() => { const s = normSpecs(d.specs); return s ? [s] : undefined })(),
+    station: d.station || '',
+  }))
+}
+
+/* ---------------- 补录人工单（联调未覆盖，仍 mock） ---------------- */
+export function fetchOfflineOrders(): Promise<Order[]> {
+  return delay([
+    { ...mkOrder(51, 'C04', 'prepay', 'paid', 'cash', 64, '补录 · 现金', []), source: 'offline', items: [{ id: 1, name: '口水鸡', qty: 1, price: 38, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 2, price: 6, itemType: 'dish', isServed: false, isRefunded: false }] },
+    { ...mkOrder(52, 'B05', 'postpay', 'unsettled', '', 180, '补录 · 后付挂账', []), source: 'offline', items: [{ id: 1, name: '红烧肉', qty: 1, price: 78, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 3, price: 9, itemType: 'dish', isServed: false, isRefunded: false }] },
+  ])
+}
+
+/* ---------------- KDS 后厨（真实） ---------------- */
+export async function fetchKdsOrders(): Promise<Order[]> {
+  const data = (await http.get('/admin/kitchen/orders')) as { items: ApiKitchenOrder[] }
+  return (data.items || []).map((o) => ({
+    id: o.id,
+    no: o.no || `OD${o.id}`,
+    tableNo: o.table_no || '',
+    area: '', // 后端厨房端点未返回区名，视图仅展示 #单号
+    sessionId: 0,
+    payMode: o.pay_mode,
+    source: 'online',
+    payChannel: '',
+    status: o.status,
+    totalAmount: 0,
+    paidAmount: 0,
+    createdAt: fmtDT(o.created_at),
+    items: (o.items || []).map((it) => ({
+      id: it.id,
+      name: it.name,
+      specs: normSpecs(it.specs),
+      qty: it.qty,
+      price: 0,
+      itemType: 'dish',
+      isServed: false,
+      isRefunded: false,
+    })),
+    station: o.station || '',
+  }))
+}
+
+/* ---------------- 管理后台 ---------------- */
+export function fetchStaff(): Promise<Staff[]> {
+  return delay([
+    { id: 1, name: '张店长', employeeNo: '1001', role: 'owner', phone: '138****0001', status: 'active', lastLogin: '今天 18:02' },
+    { id: 2, name: '李收银', employeeNo: '1002', role: 'cashier', phone: '138****0002', status: 'active', lastLogin: '今天 17:40' },
+    { id: 3, name: '王厨师', employeeNo: '1003', role: 'kitchen', phone: '138****0003', status: 'active', lastLogin: '今天 17:20' },
+    { id: 4, name: '赵厨师', employeeNo: '1004', role: 'kitchen', phone: '138****0004', status: 'disabled', lastLogin: '08-20 12:10' },
+  ])
+}
+
+// 日志：action（7.4）→ 中文展示；level 按动作敏感性推导（AuditLog 无 level 字段）
+const ACTION_LABEL: Record<string, string> = {
+  'staff.login': '员工登录',
+  'order.create_offline': '补录人工单',
+  'order.cashier_pay': '代客收款',
+  'order.status_change': '改订单状态',
+  'bill.pay': '前台收银入账',
+  'bill.cancel': '取消结账',
+  'session.close': '清台',
+  'session.write_off': '核销清台',
+  'dish.soldout': '沽清',
+  'order.refund': '退款',
+}
+function logLevel(action: string): OpLog['level'] {
+  if (action.includes('refund') || action.includes('write_off') || action === 'bill.pay' || action === 'order.cashier_pay') return 'warn'
+  return 'info'
+}
+
+export async function fetchOpLogs(): Promise<OpLog[]> {
+  const data = (await http.get('/admin/logs')) as { total: number; items: ApiLog[] }
+  return (data.items || []).map((l) => ({
+    id: l.id,
+    time: fmtDT(l.created_at),
+    operator: l.operator_name || l.role || '系统',
+    action: ACTION_LABEL[l.action] || l.action,
+    target: l.target_type ? (l.target_id ? `${l.target_type}#${l.target_id}` : l.target_type) : '—',
+    detail: typeof l.detail === 'string' ? l.detail : l.detail ? JSON.stringify(l.detail) : '',
+    level: logLevel(l.action),
+  }))
+}
+
+export function fetchBackups(): Promise<BackupTask[]> {
+  return delay([
+    { id: 1, time: '今天 03:00', type: 'full', size: '128.4MB', status: 'success', note: '每日全量 · 自动' },
+    { id: 2, time: '今天 00:10', type: 'wal', size: '12MB', status: 'success', note: 'WAL 归档 · 每小时' },
+    { id: 3, time: '昨天 23:00', type: 'manual', size: '126.8MB', status: 'success', note: '打烊手动备份' },
+    { id: 4, time: '前天 03:00', type: 'full', size: '124.1MB', status: 'failed', note: '对象存储上传超时（已重试成功）' },
+  ])
+}
+
+// 退款单（真实，单步退款：请求即处理）。后端 status success/pending/failed → 前端展示 done/pending/rejected
+export async function fetchRefunds(): Promise<RefundReq[]> {
+  const data = (await http.get('/admin/refunds')) as { items: ApiRefund[] }
+  return (data.items || []).map((r) => ({
+    id: r.id,
+    orderNo: r.order_no || '',
+    tableNo: r.table_no || '外带',
+    amount: r.amount_cents / 100,
+    reason: r.reason || '',
+    channel: (r.channel as PayChannel) || 'wechat',
+    status: r.status === 'success' ? 'done' : r.status === 'failed' ? 'rejected' : 'pending',
+    requestedBy: r.requested_by || '—',
+    requestedAt: fmtDT(r.requested_at),
+    handledBy: r.handled_by || undefined,
+    handledAt: r.handled_at ? fmtDT(r.handled_at) : undefined,
+  }))
+}
+
+// 对账：ReconSnapshot（后端分）→ 六口径 ReconRow[]（元）。diff 用后端语义「应收 - 实收」。
+export async function fetchRecon(): Promise<ReconRow[]> {
+  const s = (await http.get('/admin/recon')) as ApiRecon
+  const rmb = (c: number) => Math.round((c / 100) * 100) / 100
+  const rows: ReconRow[] = []
+  let id = 0
+  const add = (scope: string, name: string, expected: number, actual: number, diff: number, note: string) => {
+    rows.push({ id: ++id, scope, name, expected: rmb(expected), actual: rmb(actual), diff: rmb(diff), note })
+  }
+  add('订单口径', '线上直付订单应收', s.order_receivable, s.order_receivable, 0, 'prepay 单笔支付已付订单（bill_id IS NULL）')
+  add('订单口径', '账单应收（后付/前台结）', s.bill_receivable, s.bill_receivable, 0, '已支付账单，含按人项')
+  add('订单口径', '应收合计', s.total_receivable, s.total_receivable, 0, '线上直付 + 账单应收')
+  const gwName: Record<string, string> = { wechat: '微信', alipay: '支付宝' }
+  for (const ch of ['wechat', 'alipay']) {
+    const v = s.payment_by_channel?.[ch] ?? 0
+    add('支付网关口径', `${gwName[ch]}支付账单`, v, v, 0, '商户平台今日实收')
+    add('渠道口径', `${gwName[ch]}到账账户`, v, v, 0, '结算账户今日流水')
+  }
+  add('收银口径', '现金', s.payment_by_channel?.cash ?? 0, s.payment_by_channel?.cash ?? 0, 0, '收银抽屉清点')
+  add('收银口径', 'POS', s.payment_by_channel?.pos ?? 0, s.payment_by_channel?.pos ?? 0, 0, 'POS 机流水')
+  const scan = s.payment_by_channel?.scan ?? 0
+  if (scan > 0) add('收银口径', '收银台扫码', scan, scan, 0, '扫顾客付款码')
+  add('财务口径', '退款冲减', -s.refunded, -s.refunded, 0, '退款成功单合计')
+  add('财务口径', '实收净额', s.net_receipt, s.net_receipt, 0, '支付 - 退款')
+  add('挂账与核销', '挂账未收', s.unsettled_amount, s.unsettled_amount, 0, `${s.unsettled_orders} 单已出餐未收款（不计入资金流）`)
+  add('挂账与核销', '核销冲减', -s.written_off_amount, -s.written_off_amount, 0, '订单侧损耗，单独列示')
+  add('对账差额', '应收 - 实收差额（六口径校验）', s.total_receivable, s.payment_paid, s.diff, s.diff === 0 ? '已对平' : '存在差异，请核对渠道流水')
+  return rows
+}
+
+/* ---------------- 动作（核心视图写动作接线，失败由 http 拦截器抛服务端 msg） ---------------- */
+
+// 代客点单 POST /admin/orders/offline（source=cashier）；金额后端重算
+export async function submitOfflineOrder(req: {
+  tid: number; pax: number; items: { dish_id: number; qty: number; remark?: string }[];
+}): Promise<{ orderId: number; total: number; status: string; sessionId: number }> {
+  const data = (await http.post('/admin/orders/offline', req)) as {
+    order_id: number; out_trade_no: string; total_amount: number; status: string; session_id: number;
+  }
+  return { orderId: data.order_id, total: data.total_amount / 100, status: data.status, sessionId: data.session_id }
+}
+
+// 代客收款（先付单现金/POS/扫码）POST /admin/orders/:id/cashier-pay
+export async function cashierPay(orderId: number, channel: 'cash' | 'pos' | 'scan'): Promise<{ amount: number }> {
+  const data = (await http.post(`/admin/orders/${orderId}/cashier-pay`, { channel })) as { amount_cents: number }
+  return { amount: data.amount_cents / 100 }
+}
+
+// 代客结账收款 POST /admin/sessions/:sid/bill/pay（生成账单并收款，会话 → settled）
+export async function createBillPay(sessionId: number, channel: 'cash' | 'pos' | 'scan'): Promise<{ amount: number }> {
+  const data = (await http.post(`/admin/sessions/${sessionId}/bill/pay`, { channel })) as { amount_cents: number }
+  return { amount: data.amount_cents / 100 }
+}
+
+// 清台 POST /admin/sessions/:sid/close
+export async function closeSession(sessionId: number): Promise<void> {
+  await http.post(`/admin/sessions/${sessionId}/close`)
+}
+
+// 店长核销清台 POST /admin/sessions/:sid/writeoff
+export async function writeOffSession(sessionId: number): Promise<void> {
+  await http.post(`/admin/sessions/${sessionId}/writeoff`)
+}
+
+// 改订单状态 POST /admin/orders/:id/status（收银台 cashier|owner，状态机 7.2 服务端校验）
+export async function changeOrderStatus(orderId: number, to: string): Promise<void> {
+  await http.post(`/admin/orders/${orderId}/status`, { to })
+}
+
+// KDS 卡片流转 POST /kds/:id/move（后厨组 kitchen|owner，7.4 接口表 §1982）
+export async function kdsMove(orderId: number, to: string): Promise<void> {
+  await http.post(`/kds/${orderId}/move`, { to })
+}
+
+// 沽清/恢复 POST /admin/dishes/:id/soldout
+export async function setSoldOut(dishId: number, soldOut: boolean): Promise<void> {
+  await http.post(`/admin/dishes/${dishId}/soldout`, { sold_out: soldOut })
+}
+
+// 退款（单步，owner）POST /orders/:id/refund；amount 传元，适配层折分
+export async function createRefund(orderId: number, req: { amount?: number; reason?: string }): Promise<{ refundId: number; amount: number }> {
+  const data = (await http.post(`/orders/${orderId}/refund`, {
+    amount: Math.round((req.amount ?? 0) * 100),
+    reason: req.reason,
+  })) as { refund_id: number; amount: number }
+  return { refundId: data.refund_id, amount: data.amount / 100 }
+}
+
+/* ---------------- 营业概览（联调未覆盖，仍 mock） ---------------- */
 export function fetchDashboard(): Promise<DashboardStats> {
   return delay({
     revenueToday: 8642.5,
@@ -63,245 +442,4 @@ export function fetchDashboard(): Promise<DashboardStats> {
       { name: '数据库备份', ok: true, detail: '今日 03:00 全量成功 · WAL 归档正常' },
     ],
   })
-}
-
-/* ---------------- 桌台图 ---------------- */
-const areaTpl: Array<{ id: number; name: string; zoneLabel: string; tableLabel: string; payMode: 'prepay' | 'postpay'; tableNos: string[] }> = [
-  { id: 1, name: '大厅', zoneLabel: '一楼大厅', tableLabel: 'A', payMode: 'prepay', tableNos: Array.from({ length: 10 }, (_, i) => `A${String(i + 1).padStart(2, '0')}`) },
-  { id: 2, name: '包间', zoneLabel: '包间 · 二楼', tableLabel: 'B', payMode: 'postpay', tableNos: Array.from({ length: 8 }, (_, i) => `B${String(i + 1).padStart(2, '0')}`) },
-  { id: 3, name: '露台', zoneLabel: '露台', tableLabel: 'C', payMode: 'prepay', tableNos: Array.from({ length: 6 }, (_, i) => `C${String(i + 1).padStart(2, '0')}`) },
-]
-
-// 模拟部分桌台处于就餐中/未结账/待清台/并桌/锁单状态
-const occupiedSpec: Record<string, { unsettled?: number; locked?: boolean; merged?: boolean; waitClean?: boolean }> = {
-  A02: { unsettled: 0 },
-  A03: { unsettled: 0 },
-  A05: { unsettled: 0 },
-  A07: { unsettled: 0, merged: true },
-  B01: { unsettled: 486 },
-  B03: { unsettled: 0 },
-  B04: { unsettled: 0, locked: true },
-  B06: { unsettled: 800, waitClean: true },
-  C02: { unsettled: 0 },
-}
-
-export function fetchTableAreas(): Promise<TableArea[]> {
-  return delay(
-    areaTpl.map((area) => ({
-      id: area.id,
-      name: area.zoneLabel,
-      zoneLabel: area.zoneLabel,
-      tableLabel: area.tableLabel,
-      defaultPayMode: area.payMode,
-      tables: area.tableNos.map((no, idx) => {
-        const spec = occupiedSpec[no]
-        const occupied = !!spec
-        return {
-          id: idx + 1,
-          tableNo: no,
-          area: area.zoneLabel,
-          zone: area.name,
-          seats: area.payMode === 'postpay' ? 10 : 4,
-          payMode: area.payMode,
-          status: occupied ? 'occupied' : 'empty',
-          session: occupied
-            ? {
-                sessionId: 1000 + idx,
-                payMode: area.payMode,
-                unsettled: spec?.unsettled ?? 0,
-                lockedForBill: spec?.locked ?? false,
-                merged: spec?.merged ?? false,
-                pax: area.payMode === 'postpay' ? 8 : 3,
-              }
-            : undefined,
-          waitClean: spec?.waitClean,
-        }
-      }),
-    })),
-  )
-}
-
-/* ---------------- 订单管理 ---------------- */
-export function fetchOrders(): Promise<Order[]> {
-  return delay([
-    mkOrder(1, 'A05', 'prepay', 'paid', 'wechat', 126, '堂食 · 3 人', [
-      { name: '宫保鸡丁', qty: 1, price: 46 },
-      { name: '酸辣土豆丝', qty: 1, price: 18 },
-      { name: '米饭', qty: 3, price: 6 },
-    ]),
-    mkOrder(2, 'A03', 'prepay', 'preparing', 'alipay', 88, '不要辣', [
-      { name: '水煮牛肉', qty: 1, price: 68 },
-      { name: '米饭', qty: 2, price: 6 },
-    ]),
-    mkOrder(3, 'B01', 'postpay', 'unsettled', '', 486, '包间 · 未结账', [
-      { name: '清蒸鲈鱼', qty: 1, price: 128 },
-      { name: '红烧肉', qty: 1, price: 78 },
-      { name: '蒜蓉油麦菜', qty: 2, price: 24 },
-    ]),
-    mkOrder(4, 'A02', 'prepay', 'served', 'wechat', 152, '', [
-      { name: '剁椒鱼头', qty: 1, price: 98 },
-      { name: '米饭', qty: 4, price: 8 },
-    ]),
-    mkOrder(5, 'C02', 'prepay', 'pending', '', 64, '外带', [
-      { name: '口水鸡', qty: 1, price: 38 },
-      { name: '米饭', qty: 2, price: 6 },
-    ]),
-    mkOrder(6, 'B04', 'postpay', 'unsettled', '', 520, '结账中 · 锁单', [
-      { name: '佛跳墙', qty: 1, price: 298 },
-      { name: '红烧狮子头', qty: 2, price: 96 },
-    ]),
-  ])
-}
-
-function mkOrder(
-  id: number, tableNo: string, payMode: 'prepay' | 'postpay', status: string,
-  payChannel: string, totalAmount: number, remark: string,
-  items: { name: string; qty: number; price: number }[],
-): Order {
-  return {
-    id, no: `OD${String(202608240000 + id)}`, tableNo, area: '大厅', sessionId: 1000 + id,
-    payMode, source: 'online', payChannel: payChannel as never, status,
-    totalAmount, paidAmount: ['paid', 'preparing', 'served'].includes(status) ? totalAmount : 0,
-    createdAt: `2026-08-24 18:${String(10 + id).padStart(2, '0')}`, remark,
-    items: items.map((it, i) => ({ id: i + 1, name: it.name, qty: it.qty, price: it.price, itemType: 'dish', isServed: false, isRefunded: false })),
-  }
-}
-
-/* ---------------- 需人工处理 ---------------- */
-export function fetchManualOrders(): Promise<Order[]> {
-  return delay([
-    { ...mkOrder(31, 'A09', 'prepay', 'manual', 'wechat', 210, '重复扣款 · 已收到两笔成功回调', []), manualState: 'pending', items: [{ id: 1, name: '锅包肉', qty: 1, price: 52, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 2, price: 6, itemType: 'dish', isServed: false, isRefunded: false }] },
-    { ...mkOrder(32, 'B08', 'postpay', 'manual', 'alipay', 358, '金额不符 · 回调金额 350 与账单 358 不一致', []), manualState: 'handling', items: [{ id: 1, name: '烤羊排', qty: 1, price: 128, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '啤酒', qty: 6, price: 30, itemType: 'dish', isServed: false, isRefunded: false }] },
-    { ...mkOrder(33, 'A01', 'prepay', 'manual', 'cash', 96, '支付失败 · 顾客现金未找到支付记录', []), manualState: 'done', items: [{ id: 1, name: '口水鸡', qty: 1, price: 38, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '酸辣土豆丝', qty: 1, price: 18, itemType: 'dish', isServed: false, isRefunded: false }] },
-  ])
-}
-
-/* ---------------- 呼叫服务员 ---------------- */
-export function fetchServiceCalls(): Promise<ServiceCall[]> {
-  return delay([
-    { id: 1, tableNo: 'A06', reason: '加水', createdAt: '18:24', status: 'pending' },
-    { id: 2, tableNo: 'B02', reason: '结账', createdAt: '18:26', status: 'pending' },
-    { id: 3, tableNo: 'C03', reason: '加餐具', createdAt: '18:10', status: 'done' },
-  ])
-}
-export function resolveServiceCall(_id: number): Promise<void> {
-  // TODO(phase2): POST /admin/service-calls/:id/resolve
-  return delay(undefined, 100)
-}
-
-/* ---------------- 打印任务 ---------------- */
-export function fetchPrintTasks(): Promise<PrintTask[]> {
-  return delay([
-    { id: 1, station: '热菜档', printerSn: 'FE-8021', kind: '下单小票 · A05', status: 'failed', retryCount: 3, createdAt: '18:22' },
-    { id: 2, station: '凉菜档', printerSn: 'FE-8022', kind: '下单小票 · B01', status: 'sent', retryCount: 0, createdAt: '18:20' },
-    { id: 3, station: '吧台', printerSn: 'FE-8023', kind: '结账小票 · B04', status: 'sent', retryCount: 0, createdAt: '18:15' },
-  ])
-}
-export function reprint(_taskId: number): Promise<void> {
-  // TODO(phase2): POST /admin/print-tasks/:id/reprint
-  return delay(undefined, 100)
-}
-
-/* ---------------- 菜品（代客点单/补录单） ---------------- */
-const dishCatalog: Array<Omit<Dish, 'id'>> = [
-  { name: '宫保鸡丁', category: '热菜', price: 46, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '水煮牛肉', category: '热菜', price: 68, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '剁椒鱼头', category: '热菜', price: 98, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '红烧肉', category: '热菜', price: 78, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '清蒸鲈鱼', category: '热菜', price: 128, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '佛跳墙', category: '热菜', price: 298, unit: '份', itemType: 'dish', station: '热菜档', soldOut: true },
-  { name: '口水鸡', category: '凉菜', price: 38, unit: '份', itemType: 'dish', station: '凉菜档' },
-  { name: '酸辣土豆丝', category: '凉菜', price: 18, unit: '份', itemType: 'dish', station: '凉菜档' },
-  { name: '夫妻肺片', category: '凉菜', price: 42, unit: '份', itemType: 'dish', station: '凉菜档', status: 'off' },
-  { name: '烤羊排', category: '热菜', price: 128, unit: '份', itemType: 'dish', station: '热菜档' },
-  { name: '青菜豆腐汤', category: '汤羹', price: 22, unit: '煲', itemType: 'dish', station: '汤羹档' },
-  { name: '西红柿蛋汤', category: '汤羹', price: 16, unit: '煲', itemType: 'dish', station: '汤羹档' },
-  { name: '米饭', category: '主食', price: 3, unit: '碗', itemType: 'dish', station: '主食档' },
-  { name: '手工水饺', category: '主食', price: 22, unit: '份', itemType: 'dish', station: '主食档' },
-  { name: '青岛啤酒', category: '酒水', price: 10, unit: '瓶', itemType: 'dish', station: '吧台' },
-  { name: '自制酸梅汤', category: '酒水', price: 12, unit: '杯', itemType: 'dish', station: '吧台' },
-  { name: '自助火锅', category: '自助', price: 58, unit: '人', itemType: 'per_head', station: '热菜档' },
-  { name: '自助烧烤', category: '自助', price: 68, unit: '人', itemType: 'per_head', station: '热菜档' },
-]
-export function fetchDishes(): Promise<Dish[]> {
-  return delay(dishCatalog.map((d, i) => ({ ...d, id: i + 1, status: d.status ?? 'on' })))
-}
-
-/* ---------------- 补录人工单（降级/堂食代录） ---------------- */
-export function fetchOfflineOrders(): Promise<Order[]> {
-  return delay([
-    { ...mkOrder(51, 'C04', 'prepay', 'paid', 'cash', 64, '补录 · 现金', []), source: 'offline', items: [{ id: 1, name: '口水鸡', qty: 1, price: 38, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 2, price: 6, itemType: 'dish', isServed: false, isRefunded: false }] },
-    { ...mkOrder(52, 'B05', 'postpay', 'unsettled', '', 180, '补录 · 后付挂账', []), source: 'offline', items: [{ id: 1, name: '红烧肉', qty: 1, price: 78, itemType: 'dish', isServed: false, isRefunded: false }, { id: 2, name: '米饭', qty: 3, price: 9, itemType: 'dish', isServed: false, isRefunded: false }] },
-  ])
-}
-
-/* ---------------- KDS 后厨 ---------------- */
-const kdsSeed: Array<{ tableNo: string; payMode: 'prepay' | 'postpay'; remark: string; station: string; dish: string; specs?: string }> = [
-  { tableNo: 'A05', payMode: 'prepay', remark: '不要香菜', station: '热菜档', dish: '宫保鸡丁' },
-  { tableNo: 'A03', payMode: 'prepay', remark: '少辣', station: '热菜档', dish: '水煮牛肉' },
-  { tableNo: 'B01', payMode: 'postpay', remark: '', station: '热菜档', dish: '清蒸鲈鱼' },
-  { tableNo: 'C01', payMode: 'prepay', remark: '', station: '凉菜档', dish: '口水鸡', specs: '麻辣' },
-  { tableNo: 'A07', payMode: 'prepay', remark: '免姜', station: '汤羹档', dish: '青菜豆腐汤' },
-]
-export function fetchKdsOrders(): Promise<Order[]> {
-  return delay(
-    kdsSeed.map((s, i) => ({
-      ...mkOrder(41 + i, s.tableNo, s.payMode, 'preparing', '', 0, s.remark, []),
-      no: `OD${202608240040 + i}`,
-      station: s.station,
-      items: [{ id: 1, name: s.dish, specs: s.specs, qty: 1, price: 0, itemType: 'dish' as const, isServed: false, isRefunded: false }],
-    })),
-  )
-}
-
-/* ---------------- 管理后台 ---------------- */
-export function fetchStaff(): Promise<Staff[]> {
-  return delay([
-    { id: 1, name: '张店长', employeeNo: '1001', role: 'owner', phone: '138****0001', status: 'active', lastLogin: '今天 18:02' },
-    { id: 2, name: '李收银', employeeNo: '1002', role: 'cashier', phone: '138****0002', status: 'active', lastLogin: '今天 17:40' },
-    { id: 3, name: '王厨师', employeeNo: '1003', role: 'kitchen', phone: '138****0003', status: 'active', lastLogin: '今天 17:20' },
-    { id: 4, name: '赵厨师', employeeNo: '1004', role: 'kitchen', phone: '138****0004', status: 'disabled', lastLogin: '08-20 12:10' },
-  ])
-}
-
-export function fetchOpLogs(): Promise<OpLog[]> {
-  return delay([
-    { id: 1, time: '18:24', operator: '张店长', action: '开启降级模式', target: '系统', detail: '降级模式开启，顾客端下单入口关闭', level: 'warn' },
-    { id: 2, time: '18:22', operator: '李收银', action: '补录人工单', target: 'OD-MAN0002', detail: '桌台 B05 · 后付挂账 ¥180', level: 'info' },
-    { id: 3, time: '18:10', operator: '李收银', action: '发起结账', target: 'B04', detail: '锁单，待收款 ¥520', level: 'info' },
-    { id: 4, time: '17:55', operator: '张店长', action: '改价', target: '口水鸡', detail: '原价 ¥40 → ¥38', level: 'warn' },
-    { id: 5, time: '17:30', operator: '王厨师', action: '沽清', target: '佛跳墙', detail: '食材售罄，当日沽清', level: 'info' },
-    { id: 6, time: '16:00', operator: '系统', action: '备份', target: 'DB 全量', detail: '全量备份成功 128MB → 对象存储', level: 'info' },
-  ])
-}
-
-export function fetchBackups(): Promise<BackupTask[]> {
-  return delay([
-    { id: 1, time: '今天 03:00', type: 'full', size: '128.4MB', status: 'success', note: '每日全量 · 自动' },
-    { id: 2, time: '今天 00:10', type: 'wal', size: '12MB', status: 'success', note: 'WAL 归档 · 每小时' },
-    { id: 3, time: '昨天 23:00', type: 'manual', size: '126.8MB', status: 'success', note: '打烊手动备份' },
-    { id: 4, time: '前天 03:00', type: 'full', size: '124.1MB', status: 'failed', note: '对象存储上传超时（已重试成功）' },
-  ])
-}
-
-export function fetchRefunds(): Promise<RefundReq[]> {
-  return delay([
-    { id: 1, orderNo: 'OD202608240031', tableNo: 'A09', amount: 52, reason: '顾客未收到菜，人工退款', channel: 'wechat', status: 'pending', requestedBy: '李收银', requestedAt: '18:20' },
-    { id: 2, orderNo: 'OD202608240016', tableNo: 'A02', amount: 24, reason: '重复扣款差额退回', channel: 'alipay', status: 'approved', requestedBy: '李收银', requestedAt: '17:42', handledBy: '张店长', handledAt: '17:58' },
-    { id: 3, orderNo: 'OD202608240005', tableNo: 'C01', amount: 6, reason: '米饭未上，取消该行', channel: 'wechat', status: 'done', requestedBy: '李收银', requestedAt: '16:30', handledBy: '张店长', handledAt: '16:40' },
-    { id: 4, orderNo: 'OD202608240033', tableNo: '外带', amount: 38, reason: '顾客拿错餐，申请退回', channel: 'cash', status: 'rejected', requestedBy: '李收银', requestedAt: '15:10', handledBy: '张店长', handledAt: '15:22' },
-  ])
-}
-
-export function fetchRecon(): Promise<ReconRow[]> {
-  return delay([
-    { id: 1, scope: '订单口径', name: '今日订单应收（线上）', expected: 8642.5, actual: 8642.5, diff: 0, note: '订单表已付金额汇总' },
-    { id: 2, scope: '订单口径', name: '今日订单应收（人工）', expected: 1210, actual: 1210, diff: 0, note: '补录单 + 代录单' },
-    { id: 3, scope: '支付网关口径', name: '微信支付账单', expected: 3975.6, actual: 3975.6, diff: 0, note: '商户平台今日实收' },
-    { id: 4, scope: '支付网关口径', name: '支付宝账单', expected: 2852.05, actual: 2852.05, diff: 0, note: '商家中心今日实收' },
-    { id: 5, scope: '收银口径', name: '现金 + POS', expected: 1814.85, actual: 1810, diff: -4.85, note: '现金短款 ¥4.85，待班次清点确认' },
-    { id: 6, scope: '渠道口径', name: '微信到账账户', expected: 3975.6, actual: 3975.6, diff: 0, note: '结算账户今日流水' },
-    { id: 7, scope: '渠道口径', name: '支付宝到账账户', expected: 2852.05, actual: 2852.05, diff: 0, note: '结算账户今日流水' },
-    { id: 8, scope: '财务口径', name: '退款/核销冲减', expected: -82, actual: -82, diff: 0, note: '已通过退款 3 笔' },
-  ])
 }

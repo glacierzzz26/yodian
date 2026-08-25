@@ -2,10 +2,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { fetchKdsOrders } from '@/api/mock'
+import { fetchKdsOrders, changeOrderStatus, kdsMove } from '@/api/mock'
+import { useAuthStore } from '@/stores/auth'
 import type { Order } from '@/types'
 
 const router = useRouter()
+const auth = useAuthStore()
 const orders = ref<Order[]>([])
 const station = ref('全部')
 const filter = ref<'new' | 'cooking' | 'done'>('new')
@@ -72,13 +74,37 @@ const counts = computed(() => {
   return c
 })
 
-function startCooking(o: Order) {
-  st.value[o.id] = 'cooking'
-  message.success(`已开始制作 · ${o.no}`)
+// 状态写入口按角色分流：后厨走 KDS 卡片流转 /kds/:id/move（16.2），owner/cashier 走收银台改状态。
+// 后付单状态机（7.2 B）无 preparing/served：仅本地标记，不写后端。
+async function startCooking(o: Order) {
+  if (o.payMode === 'postpay') {
+    st.value[o.id] = 'cooking'
+    message.info(`已开始制作（后付单无后端状态，仅本地标记）· ${o.no}`)
+    return
+  }
+  try {
+    if (auth.role === 'kitchen') await kdsMove(o.id, 'preparing')
+    else await changeOrderStatus(o.id, 'preparing')
+    st.value[o.id] = 'cooking'
+    message.success(`已开始制作 · ${o.no}`)
+  } catch (e) {
+    message.error((e as Error).message || '更新制作状态失败')
+  }
 }
-function finish(o: Order) {
-  st.value[o.id] = 'done'
-  message.success(`已出餐 · ${o.no}`)
+async function finish(o: Order) {
+  if (o.payMode === 'postpay') {
+    st.value[o.id] = 'done'
+    message.info(`已出餐（后付单无后端状态，仅本地标记）· ${o.no}`)
+    return
+  }
+  try {
+    if (auth.role === 'kitchen') await kdsMove(o.id, 'served')
+    else await changeOrderStatus(o.id, 'served')
+    st.value[o.id] = 'done'
+    message.success(`已出餐 · ${o.no}`)
+  } catch (e) {
+    message.error((e as Error).message || '更新出餐状态失败')
+  }
 }
 
 function clockText(): string {

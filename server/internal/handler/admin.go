@@ -127,9 +127,15 @@ func (h *Admin) Recon(c *gin.Context) {
 	respond.OK(c, snap)
 }
 
-// Logs GET /admin/logs 操作日志分页（16.2 追责 / 10.1 交接班）
+// Logs GET /admin/logs 操作日志分页（16.2 追责 / 10.1 交接班）。
+// 阶段 4.1 联调：join employees 补 operator_name，供前端展示操作人。
+type logRow struct {
+	model.AuditLog
+	OperatorName *string `json:"operator_name"`
+}
+
 func (h *Admin) Logs(c *gin.Context) {
-	q := h.db.Model(&model.AuditLog{}).Where("shop_id = ?", h.shopID())
+	q := h.db.Model(&model.AuditLog{}).Where("audit_logs.shop_id = ?", h.shopID())
 	if action := c.Query("action"); action != "" {
 		q = q.Where("action = ?", action)
 	}
@@ -149,11 +155,126 @@ func (h *Admin) Logs(c *gin.Context) {
 	var total int64
 	q.Count(&total)
 
-	var logs []model.AuditLog
-	if err := q.Order("id DESC").Limit(limit).Offset(offset).Find(&logs).Error; err != nil {
+	var logs []logRow
+	if err := q.Joins("LEFT JOIN employees ON employees.id = audit_logs.operator_id").
+		Select("audit_logs.*, employees.name AS operator_name").
+		Order("audit_logs.id DESC").Limit(limit).Offset(offset).Scan(&logs).Error; err != nil {
 		slog.Error("query audit logs failed", "err", err)
 		respond.Err(c, respond.ErrInternal)
 		return
 	}
 	respond.OK(c, gin.H{"total": total, "items": logs})
+}
+
+/* ---------------- 阶段 4.1 联调：商家端读端点（金额分，路由权限见 router.go） ---------------- */
+
+// ListTables GET /admin/tables：桌台图 + 会话摘要（挂账/锁单/待清台）
+func (h *Admin) ListTables(c *gin.Context) {
+	resp, bizErr := h.ops.ListTables(c.Request.Context())
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
+// ListOrders GET /admin/orders：订单管理列表（status/source/table_no/kw 过滤）
+func (h *Admin) ListOrders(c *gin.Context) {
+	f := service.AdminOrderFilter{
+		Status:  c.Query("status"),
+		Source:  c.Query("source"),
+		TableNo: c.Query("table_no"),
+		Kw:      c.Query("kw"),
+	}
+	f.Limit, _ = strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if f.Limit < 1 || f.Limit > 200 {
+		f.Limit = 50
+	}
+	f.Offset, _ = strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if f.Offset < 0 {
+		f.Offset = 0
+	}
+	resp, bizErr := h.ops.ListOrders(c.Request.Context(), f)
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
+// ListDishes GET /admin/dishes：菜品列表（代客点单/沽清共用）
+func (h *Admin) ListDishes(c *gin.Context) {
+	resp, bizErr := h.ops.ListDishes(c.Request.Context())
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
+// ListKitchenOrders GET /admin/kitchen/orders：KDS 待做/制作中订单
+func (h *Admin) ListKitchenOrders(c *gin.Context) {
+	resp, bizErr := h.ops.ListKitchenOrders(c.Request.Context())
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
+// ListRefunds GET /admin/refunds：退款单列表
+func (h *Admin) ListRefunds(c *gin.Context) {
+	resp, bizErr := h.ops.ListRefunds(c.Request.Context())
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
+// KdsMove POST /kds/:id/move：KDS 卡片流转（后厨组 kitchen|owner，7.4 接口表 §1982）。
+// 与收银台 /orders/:id/status 共用状态机（7.2 校验）；后厨在 KDS 上确认制作/出餐。
+func (h *Admin) KdsMove(c *gin.Context) {
+	id := parseIDParam(c, "id")
+	if id == 0 {
+		respond.Err(c, respond.ErrBadRequest.WithMsg("订单参数非法"))
+		return
+	}
+	var req struct {
+		To string `json:"to"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.To == "" {
+		respond.Err(c, respond.ErrBadRequest.WithMsg("缺少目标状态"))
+		return
+	}
+	if bizErr := h.orders.ChangeOrderStatus(c.Request.Context(), id, c.GetInt64("oid"), req.To); bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	middleware.RecordAudit(c, h.db, h.shopID(), "order.kds_move", "order", id, gin.H{"to": req.To})
+	respond.OK(c, gin.H{"order_id": id, "status": req.To})
+}
+
+// CashierPay POST /admin/orders/:id/cashier-pay：代客现金/POS 收款（先付即时收款）
+func (h *Admin) CashierPay(c *gin.Context) {
+	id := parseIDParam(c, "id")
+	if id == 0 {
+		respond.Err(c, respond.ErrBadRequest.WithMsg("订单参数非法"))
+		return
+	}
+	var req struct {
+		Channel string `json:"channel"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respond.Err(c, respond.ErrBadRequest)
+		return
+	}
+	resp, bizErr := h.orders.CashierPay(c.Request.Context(), id, c.GetInt64("oid"), req.Channel)
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	middleware.RecordAudit(c, h.db, h.shopID(), "order.cashier_pay", "order", id,
+		gin.H{"channel": req.Channel, "amount_cents": resp.AmountCents})
+	respond.OK(c, resp)
 }

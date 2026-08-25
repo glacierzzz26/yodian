@@ -60,20 +60,25 @@ func (s *RefundService) RefundOrder(ctx context.Context, orderID, operatorID int
 		amount = refundable
 	}
 
-	// 调网关退款（mock 成功；真实渠道接入后替换）
-	gw, err := s.gw.Get(orderChannel(&o))
-	if err != nil {
-		return nil, respond.ErrChannelDisabled.WithMsg("退款渠道未接入: %s", err)
-	}
+	// 调网关退款（mock 成功；真实渠道接入后替换）。
+	// 线下渠道（cash/pos/scan）无支付网关：当面退现，跳过网关调用、直接记录退款（对账 5.3 退款冲减照常计入）。
 	outRefundNo := genRefundNo()
-	if _, err := gw.Refund(ctx, pay.RefundReq{
-		OutTradeNo:  *o.OutTradeNo,
-		OutRefundNo: outRefundNo,
-		Amount:      amount,
-		Reason:      req.Reason,
-	}); err != nil {
-		slog.Error("gateway refund failed", "err", err, "order_id", o.ID)
-		return nil, respond.NewBiz(30007, "退款失败，请稍后重试", 200)
+	if ch := orderChannel(&o); ch == pay.ChannelWechat || ch == pay.ChannelAlipay {
+		gw, err := s.gw.Get(ch)
+		if err != nil {
+			return nil, respond.ErrChannelDisabled.WithMsg("退款渠道未接入: %s", err)
+		}
+		if _, err := gw.Refund(ctx, pay.RefundReq{
+			OutTradeNo:  *o.OutTradeNo,
+			OutRefundNo: outRefundNo,
+			Amount:      amount,
+			Reason:      req.Reason,
+		}); err != nil {
+			slog.Error("gateway refund failed", "err", err, "order_id", o.ID)
+			return nil, respond.NewBiz(30007, "退款失败，请稍后重试", 200)
+		}
+	} else {
+		slog.Info("offline cash refund, skip gateway", "order_id", o.ID, "channel", ch)
 	}
 
 	// 状态机流转 + 退款记录（同事务）
@@ -88,7 +93,7 @@ func (s *RefundService) RefundOrder(ctx context.Context, orderID, operatorID int
 		OrderID: &o.ID, OutRefundNo: outRefundNo, Channel: string(orderChannel(&o)),
 		Amount: amount, Status: "success", Reason: nullableString(req.Reason), OperatorID: &operatorID,
 	}
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&rf).Error; err != nil {
 			return err
 		}

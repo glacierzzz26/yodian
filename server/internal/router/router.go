@@ -84,7 +84,7 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		opsSvc := service.NewOpsService(db, cfg.ShopID)
 		admin := handler.NewAdmin(cfg, db, custSvc, billSvc, opsSvc)
 
-		// 收银组：cashier|owner —— 清台 / 前台收银入账 / 改状态 / 补录人工单
+		// 收银组：cashier|owner —— 清台 / 前台收银入账 / 改状态 / 补录人工单 / 代客收款 + 核心读端点
 		cashier := api.Group("/admin", middleware.StaffAuth(cfg), middleware.RequireRole("cashier", "owner"),
 			middleware.RateLimitBy(rdb, "admin", time.Minute, 60,
 				func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("oid"), 10) }))
@@ -92,8 +92,20 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		cashier.POST("/sessions/:sid/bill/pay", admin.BillPay)
 		cashier.POST("/orders/:id/status", admin.ChangeOrderStatus)
 		cashier.POST("/orders/offline", admin.CreateOfflineOrder)
+		cashier.POST("/orders/:id/cashier-pay", admin.CashierPay)
+		cashier.GET("/tables", admin.ListTables)
+		cashier.GET("/orders", admin.ListOrders)
+		cashier.GET("/dishes", admin.ListDishes)
 
-		// 店长组：owner —— 核销 / 沽清 / 对账 / 日志
+		// 后厨组：kitchen|owner —— KDS 读 + KDS 卡片流转（7.4 §1982 kitchen.POST /kds/:id/move；
+		// 通用改状态 /orders/:id/status 仍归收银台 cashier|owner）
+		kitchen := api.Group("/admin", middleware.StaffAuth(cfg), middleware.RequireRole("kitchen", "owner"),
+			middleware.RateLimitBy(rdb, "admin", time.Minute, 60,
+				func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("oid"), 10) }))
+		kitchen.GET("/kitchen/orders", admin.ListKitchenOrders)
+		kitchen.POST("/kds/:id/move", admin.KdsMove)
+
+		// 店长组：owner —— 核销 / 沽清 / 对账 / 日志 / 退款列表
 		owner := api.Group("/admin", middleware.StaffAuth(cfg), middleware.RequireRole("owner"),
 			middleware.RateLimitBy(rdb, "admin", time.Minute, 60,
 				func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("oid"), 10) }))
@@ -101,6 +113,7 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		owner.POST("/dishes/:id/soldout", admin.SoldOut)
 		owner.GET("/recon", admin.Recon)
 		owner.GET("/logs", admin.Logs)
+		owner.GET("/refunds", admin.ListRefunds)
 
 		// 退款：owner（16.2 店长权限，路径保持 /orders/:id/refund）
 		ownerOnly := api.Group("", middleware.StaffAuth(cfg), middleware.RequireRole("owner"))

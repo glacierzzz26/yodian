@@ -21,6 +21,19 @@ const ROLE_LABEL: Record<Role, { name: string; tip: string }> = {
   kitchen: { name: '后厨', tip: 'KDS' },
 }
 
+// 演示账号：角色选择 → 预填对应工号（真实权限以后端返回为准）
+const DEMO_ACCOUNT: Record<Role, { no: string; tip: string }> = {
+  owner: { no: '1001', tip: '店长 · 全部权限' },
+  cashier: { no: '1002', tip: '收银员 · 收银台' },
+  kitchen: { no: '1003', tip: '后厨 · KDS' },
+}
+
+function pickRole(r: Role) {
+  rolePick.value = r
+  employeeNo.value = DEMO_ACCOUNT[r].no
+  password.value = '123456'
+}
+
 async function doLogin() {
   if (!employeeNo.value || !password.value) {
     message.warning('请输入工号和密码')
@@ -28,9 +41,9 @@ async function doLogin() {
   }
   loading.value = true
   try {
-    await auth.mockLogin(employeeNo.value, password.value, rolePick.value)
-    message.success('登录成功')
-    const redirect = (route.query.redirect as string) || firstPath(rolePick.value)
+    const user = await auth.realLogin(employeeNo.value, password.value)
+    message.success(`登录成功：${user.name}（${ROLE_LABEL[user.role].name}）`)
+    const redirect = (route.query.redirect as string) || firstPath(user.role)
     router.push(redirect)
   } catch (e) {
     message.error((e as Error).message || '登录失败')
@@ -51,7 +64,7 @@ async function doLogin() {
         <div
           v-for="r in (['owner','cashier','kitchen'] as Role[])" :key="r"
           :class="{ on: rolePick === r }"
-          @click="rolePick = r"
+          @click="pickRole(r)"
         >
           <b>{{ ROLE_LABEL[r].name }}</b><small>{{ ROLE_LABEL[r].tip }}</small>
         </div>
@@ -64,7 +77,7 @@ async function doLogin() {
 
       <button class="lg-btn" :disabled="loading" @click="doLogin">{{ loading ? '登录中…' : '登 录' }}</button>
 
-      <div class="lg-tip"><b>开发期说明</b>：当前为 mock 登录（任意工号 + 123456），选择角色决定可见菜单（店长可见全部）。后端 /auth/login 就绪后切换真实鉴权。</div>
+      <div class="lg-tip"><b>联调说明</b>：真实鉴权 /auth/staff/login。演示账号 1001 店长 / 1002 收银 / 1003 后厨，密码 123456；实际权限以后端返回为准（越权 40003 拦截）。</div>
       <div class="lg-fs">原型构建版本：2026-08-24 · v1.8 设计基线</div>
     </div>
   </div>

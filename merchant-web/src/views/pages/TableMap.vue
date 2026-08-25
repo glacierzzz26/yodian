@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { fetchTableAreas } from '@/api/mock'
+import { fetchTableAreas, createBillPay, closeSession, writeOffSession } from '@/api/mock'
 import { useAuthStore } from '@/stores/auth'
 import type { TableArea, TableInfo } from '@/types'
 
@@ -61,22 +61,37 @@ function openDetail(t: TableInfo) {
 }
 
 function onSettle() {
-  if (!current.value) return
+  if (!current.value?.session) return
+  const t = current.value
+  let ch = 'cash'
   Modal.confirm({
-    title: `对 ${current.value.tableNo} 发起结账`,
-    content: `生成会话结账单，金额由服务端聚合计算。${isOwner() ? '可代客结账（现金/POS/扫顾客付款码）。' : ''}`,
-    okText: '发起结账',
+    title: `对 ${t.tableNo} 发起结账并收款`,
+    content: () => h('div', [
+      h('p', { style: 'color:var(--t3);font-size:13px;margin-bottom:8px' }, '收款渠道（金额由服务端聚合计算，结账后待清台）：'),
+      h('select', {
+        style: 'width:100%;height:36px;padding:0 10px;border:1px solid #d9d9d9;border-radius:6px;outline:none;font-size:14px;background:#fff',
+        onInput: (e: Event) => { ch = (e.target as HTMLSelectElement).value },
+      }, ['cash', 'pos', 'scan'].map((v) => h('option', { value: v }, { cash: '现金收款', pos: 'POS 收款', scan: '扫码收款（顾客付款码）' }[v]))),
+    ]),
+    okText: '确认收款',
     cancelText: '取消',
-    onOk() {
-      message.success(`已对 ${current.value!.tableNo} 生成结账单（模拟）`)
-      current.value = null
+    async onOk() {
+      try {
+        const r = await createBillPay(t.session!.sessionId, ch as 'cash' | 'pos' | 'scan')
+        message.success(`已收款 ¥${r.amount.toFixed(2)}，本桌待清台`)
+        current.value = null
+        await load()
+      } catch (e) {
+        message.error((e as Error).message || '结账收款失败')
+      }
     },
   })
 }
 
 function onCloseTable() {
   if (!current.value) return
-  const unsettled = current.value.session?.unsettled || 0
+  const t = current.value
+  const unsettled = t.session?.unsettled || 0
   if (unsettled > 0) {
     Modal.warning({
       title: '禁止直接清台',
@@ -84,17 +99,40 @@ function onCloseTable() {
     })
     return
   }
-  Modal.confirm({ title: '清台', content: '确认结束会话并清台？', okText: '清台', onOk() { message.success('已清台（模拟）'); current.value = null } })
+  if (!t.session) { message.warning('该桌无进行中会话，无需清台'); return }
+  Modal.confirm({
+    title: '清台', content: '确认结束会话并清台？', okText: '清台',
+    async onOk() {
+      try {
+        await closeSession(t.session!.sessionId)
+        message.success('已清台')
+        current.value = null
+        await load()
+      } catch (e) {
+        message.error((e as Error).message || '清台失败')
+      }
+    },
+  })
 }
 
 function onWriteOff() {
-  if (!current.value) return
+  if (!current.value?.session) return
+  const t = current.value
   Modal.confirm({
     title: '跑单/免单核销',
-    content: '选择原因将留痕（记录操作人 + 原因，计入核销报表）。',
+    content: '店长强制关台：未结账子单标记核销，记录操作人，计入核销报表。',
     okText: '确认核销',
     okButtonProps: { danger: true },
-    onOk() { message.success('已核销并清台（模拟）'); current.value = null },
+    async onOk() {
+      try {
+        await writeOffSession(t.session!.sessionId)
+        message.success('已核销并清台')
+        current.value = null
+        await load()
+      } catch (e) {
+        message.error((e as Error).message || '核销失败')
+      }
+    },
   })
 }
 </script>

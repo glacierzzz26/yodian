@@ -12,6 +12,7 @@ import (
 
 	"github.com/yodian/server/internal/auth"
 	"github.com/yodian/server/internal/config"
+	"github.com/yodian/server/internal/middleware"
 	"github.com/yodian/server/internal/pkg/respond"
 	"github.com/yodian/server/internal/service"
 )
@@ -52,7 +53,8 @@ func (h *Staff) Login(c *gin.Context) {
 		respond.Err(c, respond.ErrInternal)
 		return
 	}
-	respond.OK(c, gin.H{"token": token, "name": emp.Name, "employee_no": emp.EmployeeNo, "role": emp.Role})
+	// 阶段 4.1 联调：补 id，前端 Operator.id 需要（后续管理 API 以 operator_id 关联）
+	respond.OK(c, gin.H{"token": token, "id": emp.ID, "name": emp.Name, "employee_no": emp.EmployeeNo, "role": emp.Role})
 }
 
 // CloseSession POST /api/sessions/:sid/close 清台（未结账被拒）
@@ -66,6 +68,7 @@ func (h *Staff) CloseSession(c *gin.Context) {
 		respond.Err(c, bizErr)
 		return
 	}
+	middleware.RecordAudit(c, h.db, h.shopID(), "session.close", "session", sid, gin.H{"action": "close"})
 	respond.OK(c, gin.H{"session_id": sid, "action": "close"})
 }
 
@@ -80,6 +83,7 @@ func (h *Staff) WriteOff(c *gin.Context) {
 		respond.Err(c, bizErr)
 		return
 	}
+	middleware.RecordAudit(c, h.db, h.shopID(), "session.write_off", "session", sid, gin.H{"action": "write_off"})
 	respond.OK(c, gin.H{"session_id": sid, "action": "write_off"})
 }
 
@@ -100,6 +104,8 @@ func (h *Staff) RefundOrder(c *gin.Context) {
 		respond.Err(c, bizErr)
 		return
 	}
+	middleware.RecordAudit(c, h.db, h.shopID(), "order.refund", "order", id,
+		gin.H{"refund_id": rf.ID, "amount_cents": int64(rf.Amount)})
 	respond.OK(c, gin.H{"refund_id": rf.ID, "out_refund_no": rf.OutRefundNo, "amount": int64(rf.Amount), "status": rf.Status})
 }
 

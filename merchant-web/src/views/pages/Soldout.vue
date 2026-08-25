@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { fetchDishes } from '@/api/mock'
+import { fetchDishes, setSoldOut } from '@/api/mock'
 import type { Dish } from '@/types'
 
 const dishes = ref<Dish[]>([])
@@ -24,14 +24,27 @@ const cats = computed(() => ['全部', ...new Set(dishes.value.map((d) => d.cate
 const shown = computed(() => (cat.value === '全部' ? dishes.value : dishes.value.filter((d) => d.category === cat.value)))
 const soldCount = computed(() => dishes.value.filter((d) => d.soldOut).length)
 
-function toggle(d: Dish) {
-  d.soldOut = !d.soldOut
-  message.success(`「${d.name}」已${d.soldOut ? '沽清（顾客端立即显示「今日已售罄」）' : '恢复可售'}`)
+async function toggle(d: Dish) {
+  const next = !d.soldOut
+  try {
+    await setSoldOut(d.id, next)
+    d.soldOut = next
+    message.success(`「${d.name}」已${next ? '沽清（顾客端立即显示「今日已售罄」）' : '恢复可售'}`)
+  } catch (e) {
+    message.error((e as Error).message || '沽清操作失败')
+  }
 }
 
-function clearAll() {
-  dishes.value.forEach((d) => { d.soldOut = false })
-  message.success('已恢复全部菜品为可售')
+async function clearAll() {
+  try {
+    for (const d of dishes.value) {
+      if (d.soldOut) await setSoldOut(d.id, false)
+      d.soldOut = false
+    }
+    message.success('已恢复全部菜品为可售')
+  } catch (e) {
+    message.error((e as Error).message || '恢复失败')
+  }
 }
 </script>
 
