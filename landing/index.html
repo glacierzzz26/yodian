@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>悦点点餐</title>
+<!-- 中间页 H5（设计 4.3）：单文件兜底页，UA 分流 + 引导 + 二维码无效屏。
+     极轻原则：无框架、内联样式、零外部请求；QR_BASE_URL 即本页根路径 /t。
+     扫码参数按契约 #5 解析 ?tid=&sig=（无 ts，qr_version 承担吊销）。 -->
+<style>
+  :root { --brand:#e34d2b; --ink:#1f2329; --sub:#6b7280; --bg:#faf6f2; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif; }
+  main { min-height:100%; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { width:100%; max-width:340px; background:#fff; border-radius:16px; padding:32px 24px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.06); }
+  .logo { width:64px; height:64px; margin:0 auto 16px; border-radius:18px; background:var(--brand); color:#fff; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:2px; }
+  h1 { font-size:20px; font-weight:600; line-height:1.4; }
+  p.desc { margin-top:12px; font-size:14px; line-height:1.7; color:var(--sub); }
+  p.hint { margin-top:16px; display:none; font-size:13px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 12px; line-height:1.6; }
+  p.brand { font-size:12px; color:#c2c7cf; margin-top:20px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="logo">悦点</div>
+    <h1 id="title">悦点点餐</h1>
+    <p class="desc" id="desc"></p>
+    <p class="hint" id="hint"></p>
+    <p class="brand">悦点 · 扫码点餐</p>
+  </div>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var tid = q.get('tid'), sig = q.get('sig');
+  var ua = navigator.userAgent;
+  var isWx = /MicroMessenger/i.test(ua);
+  var isAli = /AlipayClient|TinyAppHelper/i.test(ua);
+  var title = document.getElementById('title');
+  var desc = document.getElementById('desc');
+  var hint = document.getElementById('hint');
+
+  // 场景 3：签名缺失/无效 → 二维码无效屏（不进入菜单）
+  if (!tid || !sig) {
+    title.textContent = '二维码无效';
+    desc.textContent = '桌贴二维码不完整或已失效，请联系服务员协助处理。';
+    return;
+  }
+
+  // 场景 1：平台规则未生效/灰度异常 → 按 UA 引导进入小程序
+  if (isWx) {
+    title.textContent = '正在进入小程序';
+    desc.textContent = '若未自动跳转，请点击右上角「···」选择重新打开；或返回后在微信中重新扫描桌贴二维码。';
+    return;
+  }
+  if (isAli) {
+    title.textContent = '正在进入小程序';
+    desc.textContent = '若未自动跳转，请返回后在支付宝中重新扫描桌贴二维码，将直接进入点餐小程序。';
+    return;
+  }
+
+  // 场景 2：其他环境 → 仅提示，不暴露点单能力
+  title.textContent = '请使用微信或支付宝扫码';
+  desc.textContent = '桌贴二维码需在微信或支付宝内打开。请打开微信或支付宝，扫描桌贴上的二维码开始点餐。';
+  hint.style.display = 'block';
+  hint.textContent = '本页面仅用于扫码引导，不提供点单功能。';
+})();
+</script>
+</body>
+</html>

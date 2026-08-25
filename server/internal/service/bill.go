@@ -62,7 +62,7 @@ func (s *BillService) CreateBill(ctx context.Context, sessionID int64) (*model.B
 	}
 
 	// postpay/frontend 首次结账：按人项一次性计入（3.8），折叠进账单总额
-	if (sess.PayMode == "postpay" || sess.PayMode == "frontend") && !s.hasPriorBill(ctx, sess.ID) {
+	if (sess.PayMode == "postpay" || sess.PayMode == "frontend") && !s.hasPriorChargedBill(ctx, sess.ID) {
 		charges, bizErr := s.loadPerHead(ctx)
 		if bizErr != nil {
 			return nil, bizErr
@@ -198,7 +198,7 @@ func (s *BillService) BillPay(ctx context.Context, sessionID, operatorID int64, 
 	for _, o := range orders {
 		total += o.TotalAmount
 	}
-	if (sess.PayMode == "postpay" || sess.PayMode == "frontend") && !s.hasPriorBill(ctx, sess.ID) {
+	if (sess.PayMode == "postpay" || sess.PayMode == "frontend") && !s.hasPriorChargedBill(ctx, sess.ID) {
 		charges, bizErr := s.loadPerHead(ctx)
 		if bizErr != nil {
 			return nil, bizErr
@@ -271,6 +271,101 @@ func (s *BillService) BillPay(ctx context.Context, sessionID, operatorID int64, 
 	return &bill, nil
 }
 
+// PerHeadPreview 结账预览中的按人项行（只读展示）
+type PerHeadPreview struct {
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	Price      int64  `json:"price"` // 单价（分）
+	Qty        int    `json:"qty"`   // 就餐人数
+	IsRequired bool   `json:"is_required"`
+	IsDefault  bool   `json:"is_default"`
+}
+
+// BillPreviewResp 结账预览响应
+type BillPreviewResp struct {
+	SessionID    int64            `json:"session_id"`
+	PayMode      string           `json:"pay_mode"`
+	Pax          int              `json:"pax"`
+	OrdersCount  int              `json:"orders_count"`
+	DishesAmount int64            `json:"dishes_amount"` // 未结账菜品合计（分）
+	PerHeadItems []PerHeadPreview `json:"per_head_items"`
+	PerHeadAmount int64           `json:"per_head_amount"` // 按人项合计（分）
+	Total        int64            `json:"total"`           // 应付合计 = 菜品 + 按人项（分）
+}
+
+// BillPreview GET /sessions/:sid/bill/preview：结账预览。只读聚合未结账合计 + 按人项（3.8），
+// **不加锁**（区别于 CreateBill：后者锁定会话防并发）。展示金额永远以服务端聚合为准，前端不算价。
+func (s *BillService) BillPreview(ctx context.Context, sessionID int64) (*BillPreviewResp, *respond.BizErr) {
+	var sess model.TableSession
+	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
+		return nil, respond.ErrSessionInvalid
+	}
+	var orders []model.Order
+	if err := s.db.Where("session_id = ? AND status = 'unsettled'", sess.ID).Find(&orders).Error; err != nil {
+		slog.Error("query unsettled orders failed", "err", err)
+		return nil, respond.ErrInternal
+	}
+	var dishesTotal model.Money
+	for _, o := range orders {
+		dishesTotal += o.TotalAmount
+	}
+	resp := &BillPreviewResp{
+		SessionID: sess.ID, PayMode: sess.PayMode, Pax: sess.Pax,
+		OrdersCount: len(orders), DishesAmount: int64(dishesTotal),
+	}
+	// postpay/frontend 首次结账（未真正收过钱）：按人项计入（3.8）
+	if (sess.PayMode == "postpay" || sess.PayMode == "frontend") && !s.hasPriorChargedBill(ctx, sess.ID) {
+		charges, bizErr := s.loadPerHead(ctx)
+		if bizErr != nil {
+			return nil, bizErr
+		}
+		for _, c := range charges {
+			amt := c.Price * model.Money(sess.Pax)
+			resp.PerHeadAmount += int64(amt)
+			resp.PerHeadItems = append(resp.PerHeadItems, PerHeadPreview{
+				ID: c.ID, Name: c.Name, Price: int64(c.Price), Qty: sess.Pax,
+				IsRequired: c.IsRequired, IsDefault: c.IsDefault,
+			})
+		}
+	}
+	resp.Total = resp.DishesAmount + resp.PerHeadAmount
+	return resp, nil
+}
+
+// CancelBill POST /sessions/:sid/bill/cancel：取消待支付结账单并解锁会话。
+// 支撑 3.7「超时未付 → 关闭结账单、解锁会话、允许重新发起」与 9.8 顾客取消支付后重新结账；
+// 7.4 未列此端点，为顾客结账流的必要补充（契约补充，见 3.1 归档）。
+func (s *BillService) CancelBill(ctx context.Context, sessionID int64) (*model.Bill, *respond.BizErr) {
+	var sess model.TableSession
+	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
+		return nil, respond.ErrSessionInvalid
+	}
+	var bill model.Bill
+	if err := s.db.Where("session_id = ? AND status = 'pending'", sess.ID).First(&bill).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, respond.NewBiz(20005, "暂无待支付账单", 200)
+		}
+		return nil, respond.ErrInternal
+	}
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// pending → cancelled：释放 uniq_session_active_bill（status IN pending/paid），允许重新结账
+		if err := tx.Model(&model.Bill{}).Where("id = ?", bill.ID).
+			Update("status", "cancelled").Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.TableSession{}).Where("id = ?", sess.ID).
+			Update("locked_for_bill", false).Error
+	})
+	if err != nil {
+		slog.Error("cancel bill failed", "err", err, "session_id", sess.ID)
+		return nil, respond.ErrInternal
+	}
+	// 事务内 bill 为旧值，回读已提交状态供响应（数据库以 cancelled 为准）
+	bill.Status = "cancelled"
+	slog.Info("bill cancelled", "bill_id", bill.ID, "session_id", sess.ID)
+	return &bill, nil
+}
+
 // CloseSession 清台 / 店长核销。mode: close=清台（未结账被拒）/ write_off=核销（强制关台，需 owner）。
 func (s *BillService) CloseSession(ctx context.Context, sessionID, operatorID int64, mode string) *respond.BizErr {
 	var sess model.TableSession
@@ -338,9 +433,11 @@ func (s *BillService) CloseSession(ctx context.Context, sessionID, operatorID in
 	return nil
 }
 
-func (s *BillService) hasPriorBill(ctx context.Context, sessionID int64) bool {
+// hasPriorChargedBill 会话是否已「真正收过钱」的结账单（paid 或归档 paid→closed）。
+// 3.8 按人项只随首次收钱账单计入一次：取消/核销的账单（cancelled/written_off）未收钱，不阻断再次计入。
+func (s *BillService) hasPriorChargedBill(ctx context.Context, sessionID int64) bool {
 	var n int64
-	s.db.Model(&model.Bill{}).Where("session_id = ?", sessionID).Count(&n)
+	s.db.Model(&model.Bill{}).Where("session_id = ? AND status IN ('paid','closed')", sessionID).Count(&n)
 	return n > 0
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/yodian/landing" // 3.2 中间页 H5（go:embed 进二进制）
 	"github.com/yodian/server/internal/config"
 	"github.com/yodian/server/internal/handler"
 	"github.com/yodian/server/internal/middleware"
@@ -25,6 +26,11 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
+	// 阶段 3.2：中间页 H5 一码双扫（4.3 兜底页）。挂根路径 /t（非 /api），QR_BASE_URL 即指向此页。
+	landingHTML := func(c *gin.Context) { c.Data(200, "text/html; charset=utf-8", landing.IndexHTML()) }
+	r.GET("/t", landingHTML)
+	r.GET("/t/", landingHTML)
+
 	api := r.Group("/api")
 	api.Use(middleware.RateLimit(rdb, "global", time.Minute, 120)) // 16.3 全局兜底 IP 120/min
 	{
@@ -34,7 +40,7 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		custSvc := service.NewOrderService(db, rdb, cfg.ShopID, ws.Default)
 		billSvc := service.NewBillService(db, rdb, cfg.ShopID, ws.Default)
 		custSvc.SetBillService(billSvc) // 回调单号为账单时委托账单入账
-		cust := handler.NewCustomer(cfg, db, custSvc, billSvc, gw)
+		cust := handler.NewCustomer(cfg, db, rdb, custSvc, billSvc, gw)
 		api.POST("/auth/login", middleware.RateLimit(rdb, "cust_login", time.Minute, 5), cust.Login)
 		api.GET("/tables/:tid/menu", cust.Menu)
 
@@ -53,6 +59,20 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 
 		// 阶段 2.3：顾客结账（生成结账单）
 		authed.POST("/sessions/:sid/bill", cust.CreateBill)
+
+		// 阶段 3.1：顾客端契约缺口补齐（7.4 接口表；全走顾客 JWT）
+		authed.GET("/sessions/:sid/orders", cust.SessionOrders)
+		authed.PATCH("/sessions/:sid/pax", cust.UpdatePax)
+		authed.GET("/sessions/:sid/bill/preview", cust.BillPreview)
+		authed.POST("/sessions/:sid/bill/cancel", cust.CancelBill) // 契约补充：3.7 取消结账解锁会话
+		authed.POST("/pay/switch", middleware.RateLimitBy(rdb, "switch", time.Minute, 10,
+			func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("cid"), 10) }), cust.SwitchChannel)
+		authed.GET("/orders/:id/status", cust.OrderStatus)
+		authed.POST("/auth/phone-code", middleware.RateLimitBy(rdb, "sms_code", time.Minute, 5,
+			func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("cid"), 10) }), cust.PhoneCode)
+		authed.POST("/auth/phone-bind", cust.PhoneBind)
+		authed.POST("/sessions/:sid/call-waiter", middleware.RateLimitBy(rdb, "call_waiter", 10*time.Second, 1,
+			func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("cid"), 10) }), cust.CallWaiter)
 
 		// 阶段 2.3/2.4：员工登录（16.3 登录限流 IP 5/min，防爆破）
 		staffSvc := service.NewStaffService(db, cfg.ShopID)

@@ -1,0 +1,59 @@
+{
+  "pages": [
+    {
+      "path": "pages/entry/index",
+      "style": {
+        "navigationBarTitleText": "悦点点餐"
+      }
+    },
+    {
+      "path": "pages/menu/index",
+      "style": {
+        "navigationBarTitleText": "菜单",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/order/index",
+      "style": {
+        "navigationBarTitleText": "确认订单"
+      }
+    },
+    {
+      "path": "pages/pay/index",
+      "style": {
+        "navigationBarTitleText": "收银台"
+      }
+    },
+    {
+      "path": "pages/orders/index",
+      "style": {
+        "navigationBarTitleText": "本桌订单"
+      }
+    },
+    {
+      "path": "pages/checkout/index",
+      "style": {
+        "navigationBarTitleText": "结账"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "悦点点餐",
+    "navigationBarBackgroundColor": "#FAF6F2",
+    "backgroundColor": "#FAF6F2"
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
+    }
+  }
+}

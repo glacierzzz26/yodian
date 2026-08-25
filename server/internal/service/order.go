@@ -323,6 +323,253 @@ func (s *OrderService) ChangeOrderStatus(ctx context.Context, orderID, operatorI
 	return nil
 }
 
+// SessionOrderItem 会话订单行（阶段 3 顾客端展示）
+type SessionOrderItem struct {
+	Name     string  `json:"name"`
+	ItemType string  `json:"item_type"` // dish / per_head
+	Price    int64   `json:"price"`     // 分
+	Qty      int     `json:"qty"`
+	Specs    any     `json:"specs,omitempty"`
+	Remark   *string `json:"remark,omitempty"`
+}
+
+// SessionOrderDTO 会话内单笔订单（拼桌共享可见，9.7）
+type SessionOrderDTO struct {
+	ID          int64               `json:"id"`
+	CustomerID  *int64              `json:"customer_id"`
+	Channel     *string             `json:"channel,omitempty"` // 同桌「渠道」标签（不索取昵称，只有渠道）
+	Status      string              `json:"status"`
+	TotalAmount int64               `json:"total_amount"`
+	Source      string              `json:"source"` // online / cashier
+	CreatedAt   time.Time           `json:"created_at"`
+	Items       []SessionOrderItem  `json:"items"`
+}
+
+// SessionOrdersResp 本桌会话全部订单（跨渠道互见，9.7）
+type SessionOrdersResp struct {
+	SessionID int64             `json:"session_id"`
+	TableID   int64             `json:"table_id"`
+	PayMode   string            `json:"pay_mode"`
+	Pax       int               `json:"pax"`
+	Status    string            `json:"status"`
+	Orders    []SessionOrderDTO `json:"orders"`
+}
+
+// SessionOrders GET /sessions/:sid/orders：取本桌会话全部订单 + 明细，拼桌共享查看（9.7）
+func (s *OrderService) SessionOrders(ctx context.Context, sessionID int64) (*SessionOrdersResp, *respond.BizErr) {
+	var sess model.TableSession
+	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
+		return nil, respond.ErrSessionInvalid
+	}
+	var orders []model.Order
+	if err := s.db.Preload("Items").Where("session_id = ?", sess.ID).
+		Order("created_at, id").Find(&orders).Error; err != nil {
+		slog.Error("query session orders failed", "err", err, "session_id", sess.ID)
+		return nil, respond.ErrInternal
+	}
+	// 渠道映射：order.customer_id → customers.channel（同桌「微信/支付宝」标签）
+	channels := map[int64]string{}
+	var custIDs []int64
+	for _, o := range orders {
+		if o.CustomerID != nil {
+			custIDs = append(custIDs, *o.CustomerID)
+		}
+	}
+	if len(custIDs) > 0 {
+		var custs []model.Customer
+		if err := s.db.Select("id, channel").Where("id IN ?", custIDs).Find(&custs).Error; err != nil {
+			slog.Warn("query customer channels failed", "err", err)
+		} else {
+			for _, c := range custs {
+				channels[c.ID] = c.Channel
+			}
+		}
+	}
+
+	out := make([]SessionOrderDTO, 0, len(orders))
+	for _, o := range orders {
+		dto := SessionOrderDTO{
+			ID: o.ID, CustomerID: o.CustomerID, Status: o.Status,
+			TotalAmount: int64(o.TotalAmount), Source: o.Source, CreatedAt: o.CreatedAt,
+		}
+		if o.CustomerID != nil {
+			if ch, ok := channels[*o.CustomerID]; ok {
+				dto.Channel = &ch
+			}
+		}
+		for _, it := range o.Items {
+			dto.Items = append(dto.Items, SessionOrderItem{
+				Name: it.Name, ItemType: it.ItemType, Price: int64(it.Price),
+				Qty: it.Qty, Specs: it.Specs, Remark: it.Remark,
+			})
+		}
+		out = append(out, dto)
+	}
+	return &SessionOrdersResp{
+		SessionID: sess.ID, TableID: sess.TableID, PayMode: sess.PayMode,
+		Pax: sess.Pax, Status: sess.Status, Orders: out,
+	}, nil
+}
+
+// UpdatePax PATCH /sessions/:sid/pax：设置就餐人数（16.1 唯一入口），联动刷新 per_head（3.8）。
+// prepay 首单未付：按人项行 qty 随人数重算 + 订单总额重算；postpay/frontend 的按人项在结账时按当前 pax 聚合，无需在此改。
+func (s *OrderService) UpdatePax(ctx context.Context, sessionID int64, pax int) *respond.BizErr {
+	if pax < 1 || pax > 20 {
+		return respond.NewBiz(10000, "就餐人数需在 1–20 之间", 200)
+	}
+	var sess model.TableSession
+	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
+		return respond.ErrSessionInvalid
+	}
+	if sess.Status != "active" {
+		return respond.NewBiz(20006, "会话已结束，无法修改人数", 200)
+	}
+	if sess.LockedForBill {
+		return respond.ErrSessionLocked
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.TableSession{}).Where("id = ?", sess.ID).
+			Update("pax", pax).Error; err != nil {
+			return err
+		}
+		if sess.PayMode != "prepay" {
+			return nil
+		}
+		// prepay：会话首笔未付订单若已含按人项，qty 与总额随人数联动（3.8 金额链路）
+		var first model.Order
+		if err := tx.Where("session_id = ? AND status = 'pending'", sess.ID).
+			Order("created_at, id").First(&first).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil // 无未付首单（未下单/已支付），无需重算
+			}
+			return err
+		}
+		var items []model.OrderItem
+		if err := tx.Where("order_id = ?", first.ID).Find(&items).Error; err != nil {
+			return err
+		}
+		hasPerHead := false
+		var total model.Money
+		for i := range items {
+			if items[i].ItemType == "per_head" {
+				hasPerHead = true
+				items[i].Qty = pax
+				if err := tx.Model(&model.OrderItem{}).Where("id = ?", items[i].ID).
+					Update("qty", pax).Error; err != nil {
+					return err
+				}
+			}
+			total += items[i].Price * model.Money(items[i].Qty)
+		}
+		if hasPerHead {
+			return tx.Model(&model.Order{}).Where("id = ?", first.ID).
+				Update("total_amount", total).Error
+		}
+		return nil
+	})
+	if err != nil {
+		slog.Error("update pax failed", "err", err, "session_id", sess.ID)
+		return respond.ErrInternal
+	}
+	slog.Info("pax updated", "session_id", sess.ID, "pax", pax)
+	return nil
+}
+
+// PaymentSum 订单支付摘要（查单/补单用）
+type PaymentSum struct {
+	Channel    string    `json:"channel"`
+	Amount     int64     `json:"amount"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// RefundSum 订单退款摘要
+type RefundSum struct {
+	Channel    string    `json:"channel"`
+	Amount     int64     `json:"amount"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// OrderStatusResp 主动查单响应（9.8 弱网补单定终态）
+type OrderStatusResp struct {
+	OrderID     int64        `json:"order_id"`
+	SessionID   *int64       `json:"session_id"`
+	Status      string       `json:"status"`
+	PayMode     string       `json:"pay_mode"`
+	TotalAmount int64        `json:"total_amount"`
+	PaidAmount  *int64       `json:"paid_amount,omitempty"`
+	PayChannel  *string      `json:"pay_channel,omitempty"`
+	CreatedAt   time.Time    `json:"created_at"`
+	Payments    []PaymentSum `json:"payments"`
+	Refunds     []RefundSum  `json:"refunds"`
+}
+
+// OrderStatus GET /orders/:id/status：主动查单（支付后轮询定终态，弱网补单，9.8）。
+// 只能查本人订单；状态以服务端 orders.status 为唯一事实（后付账单支付会批量置位）。
+func (s *OrderService) OrderStatus(ctx context.Context, customerID, orderID int64) (*OrderStatusResp, *respond.BizErr) {
+	var o model.Order
+	if err := s.db.First(&o, "id = ? AND shop_id = ?", orderID, s.shopID).Error; err != nil {
+		return nil, respond.NewBiz(20012, "订单不存在", 200)
+	}
+	if o.CustomerID == nil || *o.CustomerID != customerID {
+		return nil, respond.ErrForbidden.WithMsg("只能查看本人订单")
+	}
+
+	resp := &OrderStatusResp{
+		OrderID: o.ID, SessionID: o.SessionID, Status: o.Status, PayMode: o.PayMode,
+		TotalAmount: int64(o.TotalAmount), PayChannel: o.PayChannel, CreatedAt: o.CreatedAt,
+	}
+	if o.PaidAmount != nil {
+		pa := int64(*o.PaidAmount)
+		resp.PaidAmount = &pa
+	}
+	var pays []model.Payment
+	if err := s.db.Where("order_id = ?", o.ID).Order("created_at").Find(&pays).Error; err != nil {
+		slog.Warn("query payments failed", "err", err)
+	} else {
+		for _, p := range pays {
+			resp.Payments = append(resp.Payments, PaymentSum{Channel: p.Channel, Amount: int64(p.Amount), Status: p.Status, CreatedAt: p.CreatedAt})
+		}
+	}
+	var refunds []model.Refund
+	if err := s.db.Where("order_id = ?", o.ID).Order("created_at").Find(&refunds).Error; err != nil {
+		slog.Warn("query refunds failed", "err", err)
+	} else {
+		for _, r := range refunds {
+			resp.Refunds = append(resp.Refunds, RefundSum{Channel: r.Channel, Amount: int64(r.Amount), Status: r.Status, CreatedAt: r.CreatedAt})
+		}
+	}
+	return resp, nil
+}
+
+// CallWaiter POST /sessions/:sid/call-waiter：呼叫服务员（写 service_calls + WS 推商家端）。
+func (s *OrderService) CallWaiter(ctx context.Context, sessionID, customerID int64, reason *string) (*model.ServiceCall, *respond.BizErr) {
+	var sess model.TableSession
+	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
+		return nil, respond.ErrSessionInvalid
+	}
+	if sess.Status != "active" {
+		return nil, respond.NewBiz(20006, "会话已结束，无法呼叫", 200)
+	}
+	call := model.ServiceCall{
+		ShopID: s.shopID, SessionID: sess.ID, TableID: sess.TableID,
+		CustomerID: &customerID, Reason: reason, Status: "pending",
+	}
+	if err := s.db.Create(&call).Error; err != nil {
+		slog.Error("create service_call failed", "err", err)
+		return nil, respond.ErrInternal
+	}
+	s.push("service_call.new", map[string]any{
+		"call_id": call.ID, "session_id": sess.ID, "table_id": sess.TableID, "reason": reason,
+	})
+	slog.Info("service call created", "call_id", call.ID, "session_id", sess.ID, "table_id", sess.TableID)
+	return &call, nil
+}
+
+// NewOutTradeNo 导出支付单号生成器（handler 换渠道重付等场景复用）
+func NewOutTradeNo() string { return genOutTradeNo() }
 
 // enqueuePrint 出单任务落 print_tasks（MOCK_PRINTER=true 时仅记录）
 func (s *OrderService) enqueuePrint(ctx context.Context, orderID int64, billID *int64) {
