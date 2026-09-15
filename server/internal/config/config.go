@@ -2,11 +2,20 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 
 	"github.com/joho/godotenv"
+)
+
+// 占位密钥（.env.example 默认值 / .env 出厂值）。生产必须全部替换，否则可自签伪造 token/桌码签名。
+const (
+	placeholderJWTCustomer = "__change_me_customer__"
+	placeholderJWTStaff    = "__change_me_staff__"
+	placeholderQR          = "__change_me__"
+	placeholderWechatAppID = "wx_placeholder"
 )
 
 type Config struct {
@@ -118,6 +127,30 @@ func Load() *Config {
 		MockAlipay:    getBool("MOCK_ALIPAY", true),
 		MockPrinter:   getBool("MOCK_PRINTER", true),
 	}
+}
+
+// Validate 启动期配置校验（P0-4）。生产（Env != "dev"）必须显式换掉占位密钥、关闭 Mock 支付；
+// 任一不满足返回错误，由 main 直接退出，杜绝「忘改 .env 即裸奔」。
+func (c *Config) Validate() error {
+	if c.Env == "dev" {
+		return nil
+	}
+	if c.JWTCustomerSecret == "" || c.JWTCustomerSecret == placeholderJWTCustomer {
+		return fmt.Errorf("JWT_CUSTOMER_SECRET 未配置或仍为占位值（可伪造顾客 token）")
+	}
+	if c.JWTStaffSecret == "" || c.JWTStaffSecret == placeholderJWTStaff {
+		return fmt.Errorf("JWT_STAFF_SECRET 未配置或仍为占位值（可伪造店长 token）")
+	}
+	if c.QR.SignSecret == "" || c.QR.SignSecret == placeholderQR {
+		return fmt.Errorf("QR_SIGN_SECRET 未配置或仍为占位值（可伪造桌码签名）")
+	}
+	if c.MockWechatPay || c.MockAlipay {
+		return fmt.Errorf("MOCK_WECHAT_PAY/MOCK_ALIPAY 必须为 false：无鉴权的 mock 回调可白吃（APP_ENV=%s）", c.Env)
+	}
+	if c.EnableWechatPay && (c.Wechat.AppID == "" || c.Wechat.AppID == placeholderWechatAppID) {
+		return fmt.Errorf("WECHAT_APPID 未配置真实值")
+	}
+	return nil
 }
 
 func get(key, def string) string {

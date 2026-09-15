@@ -10,8 +10,11 @@ export interface BizError {
   msg: string
 }
 
-export interface RequestOptions extends UniApp.RequestOptions {
+// @dcloudio/types 的 RequestOptions.method 未含 PATCH，但 uni.request 运行时支持（16.1 的
+// PATCH /sessions/:sid/pax 需要）。此处放宽 method 联合，其余字段沿用官方类型。
+export interface RequestOptions extends Omit<UniApp.RequestOptions, 'method'> {
   auth?: boolean // 默认 true：自动带 Authorization
+  method?: UniApp.RequestOptions['method'] | 'PATCH'
 }
 
 // 401 静默重登处理器由 utils/auth.ts 注册（setReloginHandler），避免 request↔auth 循环依赖。
@@ -29,6 +32,8 @@ function requestRaw<T>(opts: RequestOptions): Promise<T> {
     const doRequest = () => {
       uni.request({
         ...opts,
+        // PATCH 不在官方 RequestOptions.method 联合中（运行时支持），此处收敛转型
+        method: opts.method as UniApp.RequestOptions['method'],
         url: /^https?:\/\//.test(opts.url) ? opts.url : BASE_URL + opts.url,
         header: {
           'Content-Type': 'application/json',

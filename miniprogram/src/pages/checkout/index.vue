@@ -3,6 +3,14 @@
     <!-- 加载中 -->
     <view v-if="loading" class="body"><view class="spin"></view><text class="tip">正在计算账单…</text></view>
 
+    <!-- 加载失败：网络/服务异常，与「暂无待结账」区分（P1-5，此前误判为已结账） -->
+    <view v-else-if="loadFailed" class="body">
+      <view class="bad">!</view>
+      <text class="label">账单加载失败，请检查网络后重试</text>
+      <wd-button block type="primary" size="large" custom-class="btn" @click="load">重试</wd-button>
+      <wd-button block plain type="primary" size="large" custom-class="btn ghost" @click="backMenu">返回菜单</wd-button>
+    </view>
+
     <!-- 无可结账 -->
     <view v-else-if="nothingToPay" class="body">
       <view class="ok">✓</view>
@@ -67,10 +75,27 @@ const tableNo = ref('—')
 const payModeLabel = ref('')
 
 const nothingToPay = ref(false)
+const loadFailed = ref(false)
 
 async function load() {
-  if (!session.sid) return
+  if (!session.sid) {
+    // P1-3：扫码顾客可能尚未 join → 先加入本桌会话
+    try {
+      await session.joinTable()
+    } catch {
+      // ignore
+    }
+  }
+  if (!session.sid) {
+    // 尚未开台：确实无账可结（非网络异常）
+    loadFailed.value = false
+    nothingToPay.value = true
+    settled.value = false
+    loading.value = false
+    return
+  }
   loading.value = true
+  loadFailed.value = false
   try {
     const p = await request<BillPreviewResp>({ url: `/sessions/${session.sid}/bill/preview` })
     preview.value = p
@@ -80,10 +105,18 @@ async function load() {
     if (p.total === 0 && p.orders_count === 0) {
       nothingToPay.value = true
       settled.value = true
+    } else {
+      nothingToPay.value = false
     }
-  } catch {
-    nothingToPay.value = true
-    settled.value = false
+  } catch (e) {
+    // P1-5：业务错（如会话无效）→ 无账可结；传输失败/5xx → 加载失败（不误报已结账）
+    const biz = e as BizError
+    if (biz && biz.__biz) {
+      nothingToPay.value = true
+      settled.value = false
+    } else {
+      loadFailed.value = true
+    }
   } finally {
     loading.value = false
   }
@@ -128,11 +161,6 @@ function backMenu() {
 }
 
 onLoad(() => {
-  if (!session.sid) {
-    uni.showToast({ title: '下单后即可结账', icon: 'none' })
-    setTimeout(() => uni.navigateBack(), 600)
-    return
-  }
   load()
 })
 onShow(() => {
@@ -172,17 +200,26 @@ onShow(() => {
   color: $sub;
   font-size: 28rpx;
 }
-.ok {
+.ok,
+.bad {
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
-  background: #22c55e;
   color: #fff;
   font-size: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 32rpx;
+}
+.ok {
+  background: #22c55e;
+}
+.bad {
+  background: #ef4444;
+}
+.btn.ghost {
+  margin-top: 20rpx;
 }
 .label {
   color: $sub;

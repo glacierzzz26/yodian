@@ -22,6 +22,15 @@
 
     <!-- 主区：分类侧栏 + 菜品列表 -->
     <view class="bd">
+      <!-- P1-7b：加载态 / 错误态（此前 loading/error 已赋值但从不渲染） -->
+      <view v-if="loading" class="state">
+        <text class="state-txt">菜单加载中…</text>
+      </view>
+      <view v-else-if="error" class="state">
+        <text class="state-txt">{{ error }}</text>
+        <wd-button size="small" plain type="primary" custom-class="state-btn" @click="retryLoad">重试</wd-button>
+      </view>
+      <template v-else>
       <scroll-view class="cats" scroll-y>
         <view
           v-for="c in cats"
@@ -64,6 +73,7 @@
         </template>
         <view v-else class="empty">本类暂无菜品</view>
       </scroll-view>
+      </template>
     </view>
 
     <!-- 底部购物车条 -->
@@ -149,7 +159,8 @@ function onQty(d: DishDTO, v: number) {
     }
     cart.addDish(d, 1)
   } else {
-    cart.decDish(d.id)
+    // P1-7a：菜单步进是跨规格聚合，减购定位该菜最后一条明细行（规格菜此前减不掉）
+    cart.decDishLine(d.id)
   }
 }
 function onSpecConfirm(selection: Record<string, string>, label: string) {
@@ -161,10 +172,17 @@ function goOrder() {
   uni.navigateTo({ url: '/pages/order/index' })
 }
 
-// 3.5：本桌会话订单（拼桌互见）；需先下单取得 sid
-function goOrders() {
+// 3.5：本桌会话订单（拼桌互见）。P1-3：sid 缺失时先 join（扫码顾客无 sid 也能看本桌单）
+async function goOrders() {
   if (!session.sid) {
-    uni.showToast({ title: '下单后即可查看本桌订单', icon: 'none' })
+    try {
+      await session.joinTable()
+    } catch {
+      // join 失败/尚未开台：无会话订单可看
+    }
+  }
+  if (!session.sid) {
+    uni.showToast({ title: '本桌还没有已下单的订单', icon: 'none' })
     return
   }
   uni.navigateTo({ url: '/pages/orders/index' })
@@ -175,10 +193,17 @@ function goProfile() {
   uni.navigateTo({ url: '/pages/profile/index' })
 }
 
-// 3.5：呼叫服务员（会话内）
+// 3.5：呼叫服务员（会话内）。P1-3：sid 缺失时先 join
 async function callWaiter() {
   if (!session.sid) {
-    uni.showToast({ title: '下单后即可呼叫服务员', icon: 'none' })
+    try {
+      await session.joinTable()
+    } catch {
+      // ignore
+    }
+  }
+  if (!session.sid) {
+    uni.showToast({ title: '本桌尚未开台，暂无法呼叫', icon: 'none' })
     return
   }
   try {
@@ -189,8 +214,14 @@ async function callWaiter() {
   }
 }
 
-onLoad(async () => {
-  // 直达路径（非扫码）也能用：有 tid/sig 则补拉菜单；都没有 → 错误屏
+async function loadMenu() {
+  loading.value = true
+  error.value = ''
+  if (!session.tid) {
+    error.value = '请从桌贴二维码进入'
+    loading.value = false
+    return
+  }
   if (!session.menu && session.tid && session.sig) {
     try {
       await session.fetchMenu()
@@ -199,9 +230,15 @@ onLoad(async () => {
     }
   }
   loading.value = false
-  if (!session.tid) {
-    error.value = '请从桌贴二维码进入'
-  }
+}
+
+function retryLoad() {
+  loadMenu()
+}
+
+onLoad(async () => {
+  // 直达路径（非扫码）也能用：有 tid/sig 则补拉菜单；都没有 → 错误屏
+  await loadMenu()
 })
 
 // 3.5 沽清同步：下拉重拉菜单（下架/沽清即时生效到两端，9.6 服务端仍为最终防线）
@@ -279,6 +316,23 @@ onPullDownRefresh(async () => {
   flex: 1;
   display: flex;
   min-height: 0;
+}
+.state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 48rpx;
+}
+.state-txt {
+  font-size: 28rpx;
+  color: $sub;
+  text-align: center;
+  line-height: 1.6;
+}
+.state-btn {
+  margin-top: 32rpx;
 }
 .cats {
   width: 176rpx;

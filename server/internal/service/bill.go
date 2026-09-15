@@ -37,9 +37,18 @@ func (s *BillService) push(event string, payload any) {
 	}
 }
 
+// AssertMember 导出会话归属断言（P0-1），供 handler 在「账单支付前置」等跨服务场景复用。
+func (s *BillService) AssertMember(ctx context.Context, sessionID, customerID int64) *respond.BizErr {
+	return assertSessionMember(s.db, s.shopID, sessionID, customerID)
+}
+
 // CreateBill 生成结账单（服务端聚合未结账子单 + postpay/frontend 首单按人项一次性计入）。
 // 并发防御：先原子锁定会话（locked_for_bill false→true），未抢到锁视为「结账中」。
-func (s *BillService) CreateBill(ctx context.Context, sessionID int64) (*model.Bill, *respond.BizErr) {
+// P0-1：先断言顾客是会话成员（防抢他人结账锁 / 取消他人结账）。
+func (s *BillService) CreateBill(ctx context.Context, sessionID, customerID int64) (*model.Bill, *respond.BizErr) {
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return nil, bizErr
+	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ? AND status = 'active'", s.shopID, sessionID).Error; err != nil {
 		return nil, respond.ErrSessionInvalid
@@ -145,7 +154,7 @@ func (s *BillService) HandleBillPaidLocked(ctx context.Context, res pay.NotifyRe
 		pm := model.Payment{
 			BillID: &bill.ID, OutTradeNo: res.OutTradeNo, Channel: string(res.Channel),
 			ChannelTradeNo: nullableString(res.ChannelTradeNo),
-			Amount: res.PaidAmount, Status: "success", CallbackRaw: res.RawPayload,
+			Amount:         res.PaidAmount, Status: "success", CallbackRaw: res.RawPayload,
 		}
 		if err := tx.Create(&pm).Error; err != nil {
 			return err
@@ -283,19 +292,23 @@ type PerHeadPreview struct {
 
 // BillPreviewResp 结账预览响应
 type BillPreviewResp struct {
-	SessionID    int64            `json:"session_id"`
-	PayMode      string           `json:"pay_mode"`
-	Pax          int              `json:"pax"`
-	OrdersCount  int              `json:"orders_count"`
-	DishesAmount int64            `json:"dishes_amount"` // 未结账菜品合计（分）
-	PerHeadItems []PerHeadPreview `json:"per_head_items"`
-	PerHeadAmount int64           `json:"per_head_amount"` // 按人项合计（分）
-	Total        int64            `json:"total"`           // 应付合计 = 菜品 + 按人项（分）
+	SessionID     int64            `json:"session_id"`
+	PayMode       string           `json:"pay_mode"`
+	Pax           int              `json:"pax"`
+	OrdersCount   int              `json:"orders_count"`
+	DishesAmount  int64            `json:"dishes_amount"` // 未结账菜品合计（分）
+	PerHeadItems  []PerHeadPreview `json:"per_head_items"`
+	PerHeadAmount int64            `json:"per_head_amount"` // 按人项合计（分）
+	Total         int64            `json:"total"`           // 应付合计 = 菜品 + 按人项（分）
 }
 
 // BillPreview GET /sessions/:sid/bill/preview：结账预览。只读聚合未结账合计 + 按人项（3.8），
 // **不加锁**（区别于 CreateBill：后者锁定会话防并发）。展示金额永远以服务端聚合为准，前端不算价。
-func (s *BillService) BillPreview(ctx context.Context, sessionID int64) (*BillPreviewResp, *respond.BizErr) {
+// P0-1：先断言成员身份。
+func (s *BillService) BillPreview(ctx context.Context, sessionID, customerID int64) (*BillPreviewResp, *respond.BizErr) {
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return nil, bizErr
+	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
 		return nil, respond.ErrSessionInvalid
@@ -335,7 +348,11 @@ func (s *BillService) BillPreview(ctx context.Context, sessionID int64) (*BillPr
 // CancelBill POST /sessions/:sid/bill/cancel：取消待支付结账单并解锁会话。
 // 支撑 3.7「超时未付 → 关闭结账单、解锁会话、允许重新发起」与 9.8 顾客取消支付后重新结账；
 // 7.4 未列此端点，为顾客结账流的必要补充（契约补充，见 3.1 归档）。
-func (s *BillService) CancelBill(ctx context.Context, sessionID int64) (*model.Bill, *respond.BizErr) {
+// P0-1：先断言成员身份（防他人取消本桌结账）。
+func (s *BillService) CancelBill(ctx context.Context, sessionID, customerID int64) (*model.Bill, *respond.BizErr) {
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return nil, bizErr
+	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
 		return nil, respond.ErrSessionInvalid

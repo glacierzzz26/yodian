@@ -120,19 +120,35 @@ function querySessionNow() {
 
 function startPoll() {
   stopPoll()
+  // P1-6：轮询耗尽仍无终态 → 置失败态（此前静默 stop 会永久卡「正在确认」）
+  const onTimeout = () => {
+    state.value = 'fail'
+  }
   if (mode.value === 'order') {
-    poller = pollOrderStatus(orderId.value, (s) => {
-      if (s.status === 'paid' || s.status === 'done') {
-        amount.value = s.total_amount
-        state.value = 'done'
-      } else if (s.status === 'refunded') {
-        state.value = 'fail'
-      }
-    })
+    poller = pollOrderStatus(
+      orderId.value,
+      (s) => {
+        if (s.status === 'paid' || s.status === 'done') {
+          amount.value = s.total_amount
+          state.value = 'done'
+        } else if (s.status === 'refunded') {
+          state.value = 'fail'
+        }
+      },
+      3000,
+      20,
+      onTimeout,
+    )
   } else {
-    poller = pollSessionSettled(session.sid || 0, (status) => {
-      if (status === 'settled') state.value = 'done'
-    })
+    poller = pollSessionSettled(
+      session.sid || 0,
+      (status) => {
+        if (status === 'settled') state.value = 'done'
+      },
+      3000,
+      20,
+      onTimeout,
+    )
   }
   poller.start()
 }

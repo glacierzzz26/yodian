@@ -16,10 +16,10 @@ type Shop struct {
 }
 
 type TableArea struct {
-	ID             int64   `gorm:"primaryKey"`
-	ShopID         int64   `gorm:"not null;index"`
-	Name           string  `gorm:"size:32;not null"`
-	SortOrder      int     `gorm:"not null;default:0"`
+	ID             int64  `gorm:"primaryKey"`
+	ShopID         int64  `gorm:"not null;index"`
+	Name           string `gorm:"size:32;not null"`
+	SortOrder      int    `gorm:"not null;default:0"`
 	DefaultPayMode *string
 	IsActive       bool `gorm:"not null;default:true"`
 }
@@ -30,19 +30,19 @@ type Table struct {
 	AreaID    *int64 `gorm:"index"`
 	TableNo   string `gorm:"size:32;not null"`
 	Seats     int    `gorm:"not null;default:2"`
-	Status    string `gorm:"size:16;not null;default:empty"` // empty / occupied（派生，3.5）
+	Status    string `gorm:"size:16;not null;default:empty"`  // empty / occupied（派生，3.5）
 	PayMode   string `gorm:"size:16;not null;default:prepay"` // prepay/postpay/frontend
 	SortOrder int    `gorm:"not null;default:0"`
 	Remark    *string
-	QrVersion int    `gorm:"not null;default:1"`
+	QrVersion int `gorm:"not null;default:1"`
 	QrcodeURL *string
 	CreatedAt time.Time
 }
 
 type Customer struct {
-	ID              int64      `gorm:"primaryKey"`
-	Channel         string     `gorm:"size:16;not null;index:idx_cust_channel_uid,unique"` // wechat/alipay
-	ChannelUID      string     `gorm:"size:128;not null;index:idx_cust_channel_uid,unique"`
+	ID              int64  `gorm:"primaryKey"`
+	Channel         string `gorm:"size:16;not null;index:idx_cust_channel_uid,unique"` // wechat/alipay
+	ChannelUID      string `gorm:"size:128;not null;index:idx_cust_channel_uid,unique"`
 	Nickname        *string
 	Phone           *string
 	PhoneVerifiedAt *time.Time
@@ -50,25 +50,35 @@ type Customer struct {
 }
 
 type TableSession struct {
-	ID            int64      `gorm:"primaryKey"`
-	ShopID        int64      `gorm:"not null;index"`
-	TableID       int64      `gorm:"not null;index"`
-	PayMode       string     `gorm:"size:16;not null"` // 开台时从 tables 快照（3.7）
-	Status        string     `gorm:"size:16;not null;default:active"`
-	LockedForBill bool       `gorm:"not null;default:false"`
-	Pax           int        `gorm:"not null;default:2"`
+	ID            int64  `gorm:"primaryKey"`
+	ShopID        int64  `gorm:"not null;index"`
+	TableID       int64  `gorm:"not null;index"`
+	PayMode       string `gorm:"size:16;not null"` // 开台时从 tables 快照（3.7）
+	Status        string `gorm:"size:16;not null;default:active"`
+	LockedForBill bool   `gorm:"not null;default:false"`
+	Pax           int    `gorm:"not null;default:2"`
 	OpenedAt      time.Time
 	ClosedAt      *time.Time
 }
 
+// TableSessionMember 会话参与人（P0-1 会话归属断言 + P1-3 拼桌互见）：
+// 扫码 join 或下单即成为成员；顾客端 /sessions/:sid/* 一律先断言成员身份。
+type TableSessionMember struct {
+	ID         int64 `gorm:"primaryKey"`
+	ShopID     int64 `gorm:"not null;index"`
+	SessionID  int64 `gorm:"not null;uniqueIndex:idx_tsm_session_customer"`
+	CustomerID int64 `gorm:"not null;uniqueIndex:idx_tsm_session_customer"`
+	CreatedAt  time.Time
+}
+
 type Bill struct {
-	ID             int64      `gorm:"primaryKey"`
-	ShopID         int64      `gorm:"not null;index"`
-	SessionID      int64      `gorm:"not null;index"`
-	TotalAmount    Money      `gorm:"type:numeric(10,2);not null"`
-	DiscountAmount Money      `gorm:"type:numeric(10,2);not null;default:0"`
-	PayableAmount  Money      `gorm:"type:numeric(10,2);not null"`
-	Status         string     `gorm:"size:16;not null"` // pending/paid/closed
+	ID             int64  `gorm:"primaryKey"`
+	ShopID         int64  `gorm:"not null;index"`
+	SessionID      int64  `gorm:"not null;index"`
+	TotalAmount    Money  `gorm:"type:numeric(10,2);not null"`
+	DiscountAmount Money  `gorm:"type:numeric(10,2);not null;default:0"`
+	PayableAmount  Money  `gorm:"type:numeric(10,2);not null"`
+	Status         string `gorm:"size:16;not null"` // pending/paid/closed
 	PayChannel     *string
 	OutTradeNo     *string
 	OperatorID     *int64
@@ -108,24 +118,24 @@ type Dish struct {
 }
 
 type Order struct {
-	ID             int64      `gorm:"primaryKey"`
-	ShopID         int64      `gorm:"not null;index"`
-	TableID        *int64     `gorm:"index"`
-	SessionID      *int64     `gorm:"index"`
-	CustomerID     *int64     `gorm:"index"`
-	BillID         *int64     `gorm:"index"`
-	PayMode        string     `gorm:"size:16;not null;default:prepay"`
-	OrderType      string     `gorm:"size:16;not null;default:dine_in"`
+	ID             int64  `gorm:"primaryKey"`
+	ShopID         int64  `gorm:"not null;index"`
+	TableID        *int64 `gorm:"index"`
+	SessionID      *int64 `gorm:"index"`
+	CustomerID     *int64 `gorm:"index"`
+	BillID         *int64 `gorm:"index"`
+	PayMode        string `gorm:"size:16;not null;default:prepay"`
+	OrderType      string `gorm:"size:16;not null;default:dine_in"`
 	PickupNo       *string
-	Source         string     `gorm:"size:16;not null;default:online"`
-	Status         string     `gorm:"size:32;not null;index"` // 含 partially_refunded(18) 等全枚举
-	PayChannel     *string    `gorm:"size:16"`
+	Source         string  `gorm:"size:16;not null;default:online"`
+	Status         string  `gorm:"size:32;not null;index"` // 含 partially_refunded(18) 等全枚举
+	PayChannel     *string `gorm:"size:16"`
 	OperatorID     *int64
-	TotalAmount    Money      `gorm:"type:numeric(10,2);not null"`
-	DiscountAmount Money      `gorm:"type:numeric(10,2);not null;default:0"`
-	PaidAmount     *Money     `gorm:"type:numeric(10,2)"`
+	TotalAmount    Money  `gorm:"type:numeric(10,2);not null"`
+	DiscountAmount Money  `gorm:"type:numeric(10,2);not null;default:0"`
+	PaidAmount     *Money `gorm:"type:numeric(10,2)"`
 	MemberID       *int64
-	OutTradeNo     *string    `gorm:"size:64;uniqueIndex"`
+	OutTradeNo     *string `gorm:"size:64;uniqueIndex"`
 	CreatedAt      time.Time
 	PaidAt         *time.Time
 	FinishedAt     *time.Time
@@ -134,8 +144,8 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID         int64  `gorm:"primaryKey"`
-	OrderID    int64  `gorm:"not null;index"`
+	ID         int64 `gorm:"primaryKey"`
+	OrderID    int64 `gorm:"not null;index"`
 	DishID     *int64
 	ItemType   string `gorm:"size:16;not null;default:dish"` // dish / per_head
 	Name       string `gorm:"size:128;not null"`
@@ -148,31 +158,31 @@ type OrderItem struct {
 }
 
 type Payment struct {
-	ID              int64  `gorm:"primaryKey"`
-	OrderID         *int64 `gorm:"index"`
-	BillID          *int64 `gorm:"index"`
-	OutTradeNo      string `gorm:"size:64;not null;uniqueIndex"`
-	Channel         string `gorm:"size:16;not null"`
-	ChannelTradeNo  *string
-	Amount          Money `gorm:"type:numeric(10,2);not null"`
-	Status          string `gorm:"size:16;not null"` // pending/success/failed/closed
-	CallbackRaw     datatypes.JSON
-	CreatedAt       time.Time
+	ID             int64  `gorm:"primaryKey"`
+	OrderID        *int64 `gorm:"index"`
+	BillID         *int64 `gorm:"index"`
+	OutTradeNo     string `gorm:"size:64;not null;uniqueIndex"`
+	Channel        string `gorm:"size:16;not null"`
+	ChannelTradeNo *string
+	Amount         Money  `gorm:"type:numeric(10,2);not null"`
+	Status         string `gorm:"size:16;not null"` // pending/success/failed/closed
+	CallbackRaw    datatypes.JSON
+	CreatedAt      time.Time
 }
 
 type Refund struct {
-	ID           int64  `gorm:"primaryKey"`
-	OrderID      *int64 `gorm:"index"`
-	BillID       *int64 `gorm:"index"`
-	PaymentID    *int64 `gorm:"index"`
-	OutRefundNo  string `gorm:"size:64;not null;uniqueIndex"`
-	Channel      string `gorm:"size:16;not null"`
-	Amount       Money  `gorm:"type:numeric(10,2);not null"`
-	Status       string `gorm:"size:16;not null"`
-	Reason       *string
-	OperatorID   *int64
-	CallbackRaw  datatypes.JSON
-	CreatedAt    time.Time
+	ID          int64  `gorm:"primaryKey"`
+	OrderID     *int64 `gorm:"index"`
+	BillID      *int64 `gorm:"index"`
+	PaymentID   *int64 `gorm:"index"`
+	OutRefundNo string `gorm:"size:64;not null;uniqueIndex"`
+	Channel     string `gorm:"size:16;not null"`
+	Amount      Money  `gorm:"type:numeric(10,2);not null"`
+	Status      string `gorm:"size:16;not null"`
+	Reason      *string
+	OperatorID  *int64
+	CallbackRaw datatypes.JSON
+	CreatedAt   time.Time
 }
 
 type PrintTask struct {
@@ -187,13 +197,13 @@ type PrintTask struct {
 }
 
 type ServiceCall struct {
-	ID         int64      `gorm:"primaryKey"`
-	ShopID     int64      `gorm:"not null;index"`
-	SessionID  int64      `gorm:"not null;index"`
-	TableID    int64      `gorm:"not null;index"`
+	ID         int64 `gorm:"primaryKey"`
+	ShopID     int64 `gorm:"not null;index"`
+	SessionID  int64 `gorm:"not null;index"`
+	TableID    int64 `gorm:"not null;index"`
 	CustomerID *int64
 	Reason     *string
-	Status     string     `gorm:"size:16;not null;default:pending"`
+	Status     string `gorm:"size:16;not null;default:pending"`
 	OperatorID *int64
 	CreatedAt  time.Time
 	ResolvedAt *time.Time
@@ -215,14 +225,14 @@ type AuditLog struct {
 
 // Employee 补充表（设计 7.1 缺失，按 16.2 员工 JWT + 前端 Staff 契约补齐）
 type Employee struct {
-	ID           int64      `gorm:"primaryKey"`
-	ShopID       int64      `gorm:"not null;index"`
-	Name         string     `gorm:"size:32;not null"`
-	EmployeeNo   string     `gorm:"size:32;not null;index:idx_emp_no_shop,unique"`
-	PasswordHash string     `gorm:"size:128;not null"`
-	Role         string     `gorm:"size:16;not null"` // owner / cashier / kitchen
-	Phone        *string    `gorm:"size:20"`
-	Status       string     `gorm:"size:16;not null;default:active"` // active / disabled
+	ID           int64   `gorm:"primaryKey"`
+	ShopID       int64   `gorm:"not null;index"`
+	Name         string  `gorm:"size:32;not null"`
+	EmployeeNo   string  `gorm:"size:32;not null;index:idx_emp_no_shop,unique"`
+	PasswordHash string  `gorm:"size:128;not null"`
+	Role         string  `gorm:"size:16;not null"` // owner / cashier / kitchen
+	Phone        *string `gorm:"size:20"`
+	Status       string  `gorm:"size:16;not null;default:active"` // active / disabled
 	LastLoginAt  *time.Time
 	CreatedAt    time.Time
 }

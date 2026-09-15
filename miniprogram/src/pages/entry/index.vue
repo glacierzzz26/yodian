@@ -47,7 +47,14 @@ async function boot() {
     devInfo.value = String(auth.customerId ?? '')
     // 2. 校验桌码签名并拉取桌台/菜单（sig 无效 → 20001 BizError → 无效屏）
     await session.fetchMenu()
-    // 3. 校验通过 → 进菜单（阶段 3.4 实现点餐主链路）
+    // 3. 扫码加入本桌会话：登记为成员（P0-1）→ 即得 sid（拼桌互见，P1-3）。
+    //    join 失败（如尚未开台返回 null、或网络抖动）不阻断进店：点单首单时仍会登记成员。
+    try {
+      await session.joinTable()
+    } catch {
+      // 静默：join 仅补齐 sid，失败可点单后再获得
+    }
+    // 4. 校验通过 → 进菜单（阶段 3.4 实现点餐主链路）
     uni.redirectTo({ url: '/pages/menu/index' })
   } catch (e) {
     const biz = e as BizError
