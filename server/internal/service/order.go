@@ -45,9 +45,9 @@ func (s *OrderService) push(event string, payload any) {
 
 // CreateOrderReq 创建订单（16.1 契约）
 type CreateOrderReq struct {
-	TID   int64           `json:"tid"`
-	Pax   int             `json:"pax"`
-	Items []OrderItemReq  `json:"items"`
+	TID   int64          `json:"tid"`
+	Pax   int            `json:"pax"`
+	Items []OrderItemReq `json:"items"`
 }
 
 type OrderItemReq struct {
@@ -154,7 +154,16 @@ func (s *OrderService) createOrder(ctx context.Context, customerID, operatorID *
 		for i := range items {
 			items[i].OrderID = order.ID
 		}
-		return tx.Create(&items).Error
+		if err := tx.Create(&items).Error; err != nil {
+			return err
+		}
+		// P0-1：下单即登记会话成员（后续 /sessions/:sid/* 归属断言依赖于此）
+		if customerID != nil {
+			if err := addSessionMember(tx, s.shopID, sess.ID, *customerID); err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		slog.Error("create order tx failed", "err", err)
 		return nil, respond.ErrInternal
@@ -278,7 +287,7 @@ func (s *OrderService) HandlePaidSuccess(ctx context.Context, res pay.NotifyResu
 		pm := model.Payment{
 			OrderID: &o.ID, OutTradeNo: res.OutTradeNo, Channel: string(res.Channel),
 			ChannelTradeNo: nullableString(res.ChannelTradeNo),
-			Amount: res.PaidAmount, Status: "success", CallbackRaw: res.RawPayload,
+			Amount:         res.PaidAmount, Status: "success", CallbackRaw: res.RawPayload,
 		}
 		return tx.Create(&pm).Error
 	})
@@ -302,13 +311,15 @@ func (s *OrderService) HandlePaidSuccess(ctx context.Context, res pay.NotifyResu
 	return nil
 }
 
-// ChangeOrderStatus 商家端改订单状态（7.4 POST /orders/:id/status，cashier|owner 权限在路由层）
-func (s *OrderService) ChangeOrderStatus(ctx context.Context, orderID, operatorID int64, to string) *respond.BizErr {
+// ChangeOrderStatus 商家端改订单状态（7.4 POST /orders/:id/status，cashier|owner 权限在路由层）。
+// P0-2：额外接收 role，经 AssertRoleTransition 做状态机 + 角色双重校验（后厨只能接单/出餐，
+// 收银员不能置退款/核销态），杜绝 kitchen 置 paid（白吃）或 cashier 置 refunded（绕开退款表）。
+func (s *OrderService) ChangeOrderStatus(ctx context.Context, orderID, operatorID int64, role, to string) *respond.BizErr {
 	var o model.Order
 	if err := s.db.First(&o, "shop_id = ? AND id = ?", s.shopID, orderID).Error; err != nil {
 		return respond.NewBiz(20012, "订单不存在", 200)
 	}
-	if bizErr := AssertTransition(o.PayMode, o.Status, to); bizErr != nil {
+	if bizErr := AssertRoleTransition(role, o.PayMode, o.Status, to); bizErr != nil {
 		return bizErr
 	}
 	updates := map[string]any{"status": to}
@@ -393,14 +404,14 @@ type SessionOrderItem struct {
 
 // SessionOrderDTO 会话内单笔订单（拼桌共享可见，9.7）
 type SessionOrderDTO struct {
-	ID          int64               `json:"id"`
-	CustomerID  *int64              `json:"customer_id"`
-	Channel     *string             `json:"channel,omitempty"` // 同桌「渠道」标签（不索取昵称，只有渠道）
-	Status      string              `json:"status"`
-	TotalAmount int64               `json:"total_amount"`
-	Source      string              `json:"source"` // online / cashier
-	CreatedAt   time.Time           `json:"created_at"`
-	Items       []SessionOrderItem  `json:"items"`
+	ID          int64              `json:"id"`
+	CustomerID  *int64             `json:"customer_id"`
+	Channel     *string            `json:"channel,omitempty"` // 同桌「渠道」标签（不索取昵称，只有渠道）
+	Status      string             `json:"status"`
+	TotalAmount int64              `json:"total_amount"`
+	Source      string             `json:"source"` // online / cashier
+	CreatedAt   time.Time          `json:"created_at"`
+	Items       []SessionOrderItem `json:"items"`
 }
 
 // SessionOrdersResp 本桌会话全部订单（跨渠道互见，9.7）
@@ -413,8 +424,49 @@ type SessionOrdersResp struct {
 	Orders    []SessionOrderDTO `json:"orders"`
 }
 
-// SessionOrders GET /sessions/:sid/orders：取本桌会话全部订单 + 明细，拼桌共享查看（9.7）
-func (s *OrderService) SessionOrders(ctx context.Context, sessionID int64) (*SessionOrdersResp, *respond.BizErr) {
+// JoinSessionResp 扫码入桌响应：无 active 会话时 SessionID 为 nil（尚未开台）
+type JoinSessionResp struct {
+	SessionID *int64 `json:"session_id"`
+	TableID   int64  `json:"table_id"`
+	PayMode   string `json:"pay_mode"`
+	Pax       int    `json:"pax"`
+	Status    string `json:"status,omitempty"`
+}
+
+// JoinSession POST /tables/:tid/join（P0-1 契约补充）：扫码即加入本桌会话，登记为成员。
+// 目的有二：① /sessions/:sid/* 的归属断言需要成员身份；② 拼桌互见（P1-3）——第二位顾客
+// 扫码即可见本桌已有订单，无须先下单。无 active/settled 会话时返回 nil session_id（尚未开台）。
+func (s *OrderService) JoinSession(ctx context.Context, tid, customerID int64) (*JoinSessionResp, *respond.BizErr) {
+	var t model.Table
+	if err := s.db.First(&t, "shop_id = ? AND id = ?", s.shopID, tid).Error; err != nil {
+		return nil, respond.ErrTableNotFound
+	}
+	var sess model.TableSession
+	err := s.db.Where("table_id = ? AND status IN ('active','settled')", t.ID).First(&sess).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// 尚未开台：返回空会话（人数取桌台座位数），顾客可正常点单（首单时开台并登记成员）
+		return &JoinSessionResp{TableID: t.ID, PayMode: t.PayMode, Pax: t.Seats}, nil
+	}
+	if err != nil {
+		slog.Error("join session query failed", "err", err, "table_id", t.ID)
+		return nil, respond.ErrInternal
+	}
+	if err := addSessionMember(s.db, s.shopID, sess.ID, customerID); err != nil {
+		slog.Error("join session create member failed", "err", err, "session_id", sess.ID, "customer_id", customerID)
+		return nil, respond.ErrInternal
+	}
+	slog.Info("customer joined session", "session_id", sess.ID, "table_id", t.ID, "customer_id", customerID)
+	return &JoinSessionResp{
+		SessionID: &sess.ID, TableID: t.ID, PayMode: sess.PayMode, Pax: sess.Pax, Status: sess.Status,
+	}, nil
+}
+
+// SessionOrders GET /sessions/:sid/orders：取本桌会话全部订单 + 明细，拼桌共享查看（9.7）。
+// P0-1：先断言顾客是本会话成员，非成员返回 ErrSessionInvalid（与会话不存在同码，防枚举）。
+func (s *OrderService) SessionOrders(ctx context.Context, sessionID, customerID int64) (*SessionOrdersResp, *respond.BizErr) {
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return nil, bizErr
+	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
 		return nil, respond.ErrSessionInvalid
@@ -471,9 +523,13 @@ func (s *OrderService) SessionOrders(ctx context.Context, sessionID int64) (*Ses
 
 // UpdatePax PATCH /sessions/:sid/pax：设置就餐人数（16.1 唯一入口），联动刷新 per_head（3.8）。
 // prepay 首单未付：按人项行 qty 随人数重算 + 订单总额重算；postpay/frontend 的按人项在结账时按当前 pax 聚合，无需在此改。
-func (s *OrderService) UpdatePax(ctx context.Context, sessionID int64, pax int) *respond.BizErr {
+// P0-1：先断言成员身份。
+func (s *OrderService) UpdatePax(ctx context.Context, sessionID, customerID int64, pax int) *respond.BizErr {
 	if pax < 1 || pax > 20 {
 		return respond.NewBiz(10000, "就餐人数需在 1–20 之间", 200)
+	}
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return bizErr
 	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
@@ -536,18 +592,18 @@ func (s *OrderService) UpdatePax(ctx context.Context, sessionID int64, pax int) 
 
 // PaymentSum 订单支付摘要（查单/补单用）
 type PaymentSum struct {
-	Channel    string    `json:"channel"`
-	Amount     int64     `json:"amount"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
+	Channel   string    `json:"channel"`
+	Amount    int64     `json:"amount"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // RefundSum 订单退款摘要
 type RefundSum struct {
-	Channel    string    `json:"channel"`
-	Amount     int64     `json:"amount"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
+	Channel   string    `json:"channel"`
+	Amount    int64     `json:"amount"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // OrderStatusResp 主动查单响应（9.8 弱网补单定终态）
@@ -603,7 +659,11 @@ func (s *OrderService) OrderStatus(ctx context.Context, customerID, orderID int6
 }
 
 // CallWaiter POST /sessions/:sid/call-waiter：呼叫服务员（写 service_calls + WS 推商家端）。
+// P0-1：先断言成员身份（防冒名呼叫）。
 func (s *OrderService) CallWaiter(ctx context.Context, sessionID, customerID int64, reason *string) (*model.ServiceCall, *respond.BizErr) {
+	if bizErr := assertSessionMember(s.db, s.shopID, sessionID, customerID); bizErr != nil {
+		return nil, bizErr
+	}
 	var sess model.TableSession
 	if err := s.db.First(&sess, "shop_id = ? AND id = ?", s.shopID, sessionID).Error; err != nil {
 		return nil, respond.ErrSessionInvalid

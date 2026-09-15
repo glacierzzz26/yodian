@@ -37,6 +37,7 @@
           </view>
         </view>
       </template>
+      <view v-else-if="error" class="empty">{{ error }}</view>
       <view v-else-if="data" class="empty">本桌暂无订单</view>
     </scroll-view>
 
@@ -61,6 +62,7 @@ const session = useSessionStore()
 const auth = useAuthStore()
 
 const data = ref<SessionOrdersResp | null>(null)
+const error = ref('')
 
 const tableNo = computed(() => session.table?.table_no || '—')
 const payModeLabel = computed(() => {
@@ -86,7 +88,19 @@ function specText(it: { specs?: unknown }) {
 }
 
 async function load() {
-  if (!session.sid) return
+  if (!session.sid) {
+    // P1-3：扫码顾客可能尚未 join（无 sid）→ 先加入本桌会话，再拉订单（拼桌互见）
+    try {
+      await session.joinTable()
+    } catch {
+      // ignore
+    }
+  }
+  if (!session.sid) {
+    error.value = '本桌尚未开台，暂无订单'
+    return
+  }
+  error.value = ''
   try {
     data.value = await request<SessionOrdersResp>({ url: `/sessions/${session.sid}/orders` })
   } catch {
@@ -102,11 +116,6 @@ function goCheckout() {
 }
 
 onLoad(() => {
-  if (!session.sid) {
-    uni.showToast({ title: '下单后即可查看本桌订单', icon: 'none' })
-    setTimeout(() => uni.navigateBack(), 600)
-    return
-  }
   load()
 })
 onShow(() => {

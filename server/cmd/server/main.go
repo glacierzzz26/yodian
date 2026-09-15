@@ -20,6 +20,12 @@ func main() {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 
+	// P0-4：生产启动期强校验（占位密钥 / 未关 Mock），不满足直接退出
+	if err := cfg.Validate(); err != nil {
+		slog.Error("config validation failed", "env", cfg.Env, "err", err)
+		os.Exit(1)
+	}
+
 	db, err := store.OpenDB(cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("open db failed", "err", err)

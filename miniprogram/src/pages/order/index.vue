@@ -1,10 +1,12 @@
 <template>
   <view class="order">
-    <!-- 人数选择（首单开台定数；首单后锁定，改人数走 PATCH /sessions/:sid/pax） -->
+    <!-- 人数选择（首单开台定数；P1-4：首单后仍可改，走 PATCH /sessions/:sid/pax，服务端按人项重算） -->
     <view class="card">
-      <PaxSelector :model-value="pax" :disabled="session.hasOrders" @update:model-value="setPax" />
-      <view v-if="session.hasOrders" class="lock">首单人数已锁定，需调整请通过「按人数变更」或呼叫服务员</view>
-      <view v-else-if="isPrepay && perHead.length" class="ph">
+      <PaxSelector :model-value="pax" @update:model-value="setPax" />
+      <view v-if="session.hasOrders && isPrepay && perHead.length" class="ph">
+        按人计费：{{ perHeadNames }}（¥{{ fen2yuan(perHeadUnit) }}/人 × {{ pax }} 人），改动即时同步
+      </view>
+      <view v-else-if="!session.hasOrders && isPrepay && perHead.length" class="ph">
         按人计费：{{ perHeadNames }}（¥{{ fen2yuan(perHeadUnit) }}/人 × {{ pax }} 人），首单自动计入
       </view>
     </view>
@@ -69,8 +71,18 @@ const isPrepay = computed(() => session.table?.pay_mode === 'prepay')
 const perHeadUnit = computed(() => perHead.value.reduce((n, p) => n + p.price, 0))
 const perHeadNames = computed(() => perHead.value.map((p) => p.name).join('、'))
 
-function setPax(v: number) {
+// P1-4：首单后改人数 → PATCH /sessions/:sid/pax（服务端按人项 qty 与总额重算 3.8）。
+// 无 sid / 无会话（尚未开台）时仅更新本地值，随首单 pax 一起提交。
+async function setPax(v: number) {
+  const prev = pax.value
   pax.value = v
+  if (session.hasOrders && session.sid) {
+    try {
+      await session.updatePax(v)
+    } catch {
+      pax.value = prev // 服务端拒绝（如会话已结账）→ 回滚本地值，toast 由 request 层统一弹
+    }
+  }
 }
 function setQty(idx: number, v: number) {
   cart.items[idx].qty = v

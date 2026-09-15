@@ -50,7 +50,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		authed.POST("/pay/prepay", middleware.RateLimitBy(rdb, "prepay", time.Minute, 10,
 			func(c *gin.Context) string { return strconv.FormatInt(c.GetInt64("cid"), 10) }), cust.Prepay)
 
-		if cfg.MockWechatPay || cfg.MockAlipay {
+		// mock 回调仅在非生产环境挂载（P0-4 纵深防御：即便 MOCK_* 误开，prod 也不暴露无鉴权回调）
+		if (cfg.MockWechatPay || cfg.MockAlipay) && cfg.Env != "prod" {
 			api.POST("/pay/notify/mock", cust.MockNotify)
 		}
 		if cfg.Env == "dev" {
@@ -61,6 +62,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, gw pay.GatewayRegis
 		authed.POST("/sessions/:sid/bill", cust.CreateBill)
 
 		// 阶段 3.1：顾客端契约缺口补齐（7.4 接口表；全走顾客 JWT）
+		// P0-1 契约补充：扫码加入本桌会话（登记成员，实现拼桌互见）
+		authed.POST("/tables/:tid/join", cust.Join)
 		authed.GET("/sessions/:sid/orders", cust.SessionOrders)
 		authed.PATCH("/sessions/:sid/pax", cust.UpdatePax)
 		authed.GET("/sessions/:sid/bill/preview", cust.BillPreview)

@@ -148,12 +148,12 @@ func (h *Customer) Menu(c *gin.Context) {
 	}
 
 	type dishDTO struct {
-		ID        int64  `json:"id"`
-		Name      string `json:"name"`
-		Price     int64  `json:"price"` // 分
-		IsSoldOut bool   `json:"is_sold_out"`
+		ID        int64   `json:"id"`
+		Name      string  `json:"name"`
+		Price     int64   `json:"price"` // 分
+		IsSoldOut bool    `json:"is_sold_out"`
 		ImageURL  *string `json:"image_url"`
-		Specs     any    `json:"specs"`
+		Specs     any     `json:"specs"`
 	}
 	catsDTO := make([]gin.H, 0, len(cats))
 	for _, cat := range cats {
@@ -210,7 +210,7 @@ func (h *Customer) CreateBill(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("会话参数非法"))
 		return
 	}
-	bill, bizErr := h.bills.CreateBill(c.Request.Context(), sid)
+	bill, bizErr := h.bills.CreateBill(c.Request.Context(), sid, c.GetInt64("cid"))
 	if bizErr != nil {
 		respond.Err(c, bizErr)
 		return
@@ -265,6 +265,11 @@ func (h *Customer) Prepay(c *gin.Context) {
 		var bill model.Bill
 		if err := h.db.First(&bill, "id = ? AND shop_id = ?", req.BillID, h.shopID()).Error; err != nil {
 			respond.Err(c, respond.ErrBadRequest.WithMsg("结账单不存在"))
+			return
+		}
+		// P0-1：账单归属断言（该顾客须为账单所属会话成员），防枚举 bill_id 替他人结账
+		if bizErr := h.bills.AssertMember(c.Request.Context(), bill.SessionID, cid); bizErr != nil {
+			respond.Err(c, bizErr)
 			return
 		}
 		if bill.OutTradeNo == nil {
@@ -393,6 +398,32 @@ func (h *Customer) TableSig(c *gin.Context) {
 
 // ---------- 阶段 3.1：顾客端契约缺口补齐 ----------
 
+// Join POST /api/tables/:tid/join?sig=xxx：扫码加入本桌会话（P0-1 契约补充）。
+// 需 QR 签名 + 顾客 JWT；登记为会话成员（拼桌互见前提）。无 active 会话时返回 session_id=null，
+// 客户端仍可点单（首单开台时自动登记成员）。
+func (h *Customer) Join(c *gin.Context) {
+	tid, err := strconv.ParseInt(c.Param("tid"), 10, 64)
+	if err != nil || tid == 0 {
+		respond.Err(c, respond.ErrBadRequest.WithMsg("桌台参数非法"))
+		return
+	}
+	var t model.Table
+	if err := h.db.First(&t, "shop_id = ? AND id = ?", h.shopID(), tid).Error; err != nil {
+		respond.Err(c, respond.ErrTableNotFound)
+		return
+	}
+	if !qrsign.Verify(h.cfg.QR.SignSecret, h.shopID(), t.ID, t.QrVersion, c.Query("sig")) {
+		respond.Err(c, respond.ErrTableNotFound.WithMsg("桌台不存在或签名无效"))
+		return
+	}
+	resp, bizErr := h.svc.JoinSession(c.Request.Context(), t.ID, c.GetInt64("cid"))
+	if bizErr != nil {
+		respond.Err(c, bizErr)
+		return
+	}
+	respond.OK(c, resp)
+}
+
 // SessionOrders GET /api/sessions/:sid/orders：本桌会话全部订单（拼桌共享，9.7）
 func (h *Customer) SessionOrders(c *gin.Context) {
 	sid, err := strconv.ParseInt(c.Param("sid"), 10, 64)
@@ -400,7 +431,7 @@ func (h *Customer) SessionOrders(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("会话参数非法"))
 		return
 	}
-	resp, bizErr := h.svc.SessionOrders(c.Request.Context(), sid)
+	resp, bizErr := h.svc.SessionOrders(c.Request.Context(), sid, c.GetInt64("cid"))
 	if bizErr != nil {
 		respond.Err(c, bizErr)
 		return
@@ -422,7 +453,7 @@ func (h *Customer) UpdatePax(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest)
 		return
 	}
-	if bizErr := h.svc.UpdatePax(c.Request.Context(), sid, req.Pax); bizErr != nil {
+	if bizErr := h.svc.UpdatePax(c.Request.Context(), sid, c.GetInt64("cid"), req.Pax); bizErr != nil {
 		respond.Err(c, bizErr)
 		return
 	}
@@ -436,7 +467,7 @@ func (h *Customer) BillPreview(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("会话参数非法"))
 		return
 	}
-	resp, bizErr := h.bills.BillPreview(c.Request.Context(), sid)
+	resp, bizErr := h.bills.BillPreview(c.Request.Context(), sid, c.GetInt64("cid"))
 	if bizErr != nil {
 		respond.Err(c, bizErr)
 		return
@@ -451,7 +482,7 @@ func (h *Customer) CancelBill(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("会话参数非法"))
 		return
 	}
-	bill, bizErr := h.bills.CancelBill(c.Request.Context(), sid)
+	bill, bizErr := h.bills.CancelBill(c.Request.Context(), sid, c.GetInt64("cid"))
 	if bizErr != nil {
 		respond.Err(c, bizErr)
 		return

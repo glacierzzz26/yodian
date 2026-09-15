@@ -63,7 +63,7 @@ func (h *Admin) ChangeOrderStatus(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("缺少目标状态"))
 		return
 	}
-	if bizErr := h.orders.ChangeOrderStatus(c.Request.Context(), id, c.GetInt64("oid"), req.To); bizErr != nil {
+	if bizErr := h.orders.ChangeOrderStatus(c.Request.Context(), id, c.GetInt64("oid"), c.GetString("role"), req.To); bizErr != nil {
 		respond.Err(c, bizErr)
 		return
 	}
@@ -247,7 +247,7 @@ func (h *Admin) KdsMove(c *gin.Context) {
 		respond.Err(c, respond.ErrBadRequest.WithMsg("缺少目标状态"))
 		return
 	}
-	if bizErr := h.orders.ChangeOrderStatus(c.Request.Context(), id, c.GetInt64("oid"), req.To); bizErr != nil {
+	if bizErr := h.orders.ChangeOrderStatus(c.Request.Context(), id, c.GetInt64("oid"), c.GetString("role"), req.To); bizErr != nil {
 		respond.Err(c, bizErr)
 		return
 	}
